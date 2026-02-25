@@ -1,0 +1,121 @@
+<dialog class="modal" [class.modal-open]="open">
+  <div class="modal-box max-w-2xl">
+    <h3 class="font-bold text-lg">Editar venta de perfil</h3>
+
+    <p class="text-sm opacity-70 mt-1">
+      {{ account?.platform?.name || '—' }} · {{ account?.email || '—' }} ·
+      Perfil #{{ sale?.profile?.profileNo || '—' }}
+    </p>
+
+    <div *ngIf="errorMessage" class="alert alert-error mt-3">
+      <span>{{ errorMessage }}</span>
+    </div>
+
+    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div class="form-control relative md:col-span-2">
+        <div class="label">
+          <span class="label-text font-semibold">Cliente</span>
+        </div>
+        <input
+          class="input input-bordered w-full"
+          [(ngModel)]="customerQuery"
+          (input)="onCustomerQueryChange()"
+          (focus)="customerDropdownOpen = true"
+          placeholder="Buscar cliente..."
+        />
+
+        <div
+          *ngIf="customerDropdownOpen && customerMatches.length > 0"
+          class="absolute z-50 mt-1 w-full border bg-base-100 shadow-xl rounded-box"
+        >
+          <ul class="menu p-2">
+            <li *ngFor="let c of customerMatches">
+              <button
+                type="button"
+                class="justify-between"
+                (mousedown)="selectCustomer(c)"
+              >
+                <span
+                  >{{ c.name }}
+                  <small class="opacity-60">{{ c.contact }}</small></span
+                >
+                <span class="badge badge-ghost">Elegir</span>
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <label class="form-control">
+        <div class="label">
+          <span class="label-text font-semibold">Precio venta</span>
+        </div>
+        <input
+          class="input input-bordered"
+          [(ngModel)]="salePrice"
+          placeholder="12,50"
+          inputmode="decimal"
+        />
+      </label>
+
+      <label class="form-control">
+        <div class="label">
+          <span class="label-text font-semibold">Fecha inicio</span>
+        </div>
+        <input
+          class="input input-bordered"
+          type="date"
+          [(ngModel)]="saleDate"
+          (ngModelChange)="onSaleDateChange()"
+        />
+      </label>
+
+      <div class="form-control md:col-span-2">
+        <div class="label">
+          <span class="label-text font-semibold">Días asignados</span>
+        </div>
+        <div class="flex gap-2">
+          <select
+            class="select select-bordered"
+            [ngModel]="periodMonths"
+            (ngModelChange)="onPeriodMonthsChange($event)"
+          >
+            <option [ngValue]="null">Meses...</option>
+            <option [ngValue]="1">1 mes</option>
+            <option [ngValue]="3">3 meses</option>
+          </select>
+          <input
+            class="input input-bordered flex-1"
+            type="number"
+            [ngModel]="periodDays"
+            (ngModelChange)="onPeriodDaysChange($event)"
+            placeholder="Días"
+          />
+        </div>
+        <div class="label">
+          <span class="label-text-alt opacity-70">
+            Corte: <b>{{ cutoffDate || '—' }}</b> ({{ daysAssigned }} días)
+          </span>
+        </div>
+      </div>
+
+      <label class="form-control md:col-span-2">
+        <div class="label">
+          <span class="label-text font-semibold">Notas</span>
+        </div>
+        <textarea
+          class="textarea textarea-bordered h-20"
+          [(ngModel)]="notes"
+        ></textarea>
+      </label>
+    </div>
+
+    <div class="modal-action">
+      <button class="btn" (click)="onClose()">Cancelar</button>
+      <button class="btn btn-primary" (click)="submit()" [disabled]="loading">
+        <span *ngIf="loading" class="loading loading-spinner"></span>
+        Guardar cambios
+      </button>
+    </div>
+  </div>
+</dialog>

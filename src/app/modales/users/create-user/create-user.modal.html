@@ -1,6 +1,6 @@
 <dialog class="modal" [class.modal-open]="open">
   <div class="modal-box">
-    <h3 class="font-bold text-lg">Crear usuario</h3>
+    <h3 class="font-bold text-lg">Crear nuevo {{ baseRole }}</h3>
 
     <div *ngIf="error" class="alert alert-error mt-3">
       <span>{{ error }}</span>
@@ -11,61 +11,39 @@
         class="input input-bordered w-full"
         placeholder="Email"
         [(ngModel)]="email"
-        name="email"
         [disabled]="loading"
       />
-
       <input
         class="input input-bordered w-full"
         placeholder="Clave"
         type="password"
         [(ngModel)]="password"
-        name="password"
         [disabled]="loading"
       />
-
       <input
         class="input input-bordered w-full"
         placeholder="Nombre"
         [(ngModel)]="nombre"
-        name="nombre"
         [disabled]="loading"
       />
-
       <input
         class="input input-bordered w-full"
         placeholder="Teléfono"
         [(ngModel)]="phone"
-        name="phone"
         [disabled]="loading"
       />
-
-      <select
-        class="select select-bordered w-full"
-        [(ngModel)]="baseRole"
-        name="baseRole"
-        [disabled]="loading"
-      >
-        <option value="EMPLOYEE">EMPLOYEE</option>
-        <option value="ADMIN">ADMIN</option>
-      </select>
     </div>
 
     <div class="modal-action">
       <button class="btn" (click)="onClose()" [disabled]="loading">
         Cancelar
       </button>
-
       <button class="btn btn-neutral" (click)="submit()" [disabled]="loading">
         <span *ngIf="!loading">Crear</span>
-        <span *ngIf="loading" class="flex items-center gap-2">
-          Creando...
-          <span class="loading loading-spinner loading-sm"></span>
-        </span>
+        <span *ngIf="loading" class="loading loading-spinner loading-sm"></span>
       </button>
     </div>
   </div>
-
   <form method="dialog" class="modal-backdrop" (click)="onClose()">
     <button>close</button>
   </form>

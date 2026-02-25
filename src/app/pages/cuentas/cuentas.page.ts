@@ -339,12 +339,17 @@ export class CuentasPage {
   }
 
   async onAccountChanged() {
-    this.closeAll();
-    await this.load();
+    // Si la modal de ver perfiles está abierta, NO llamamos a closeAll
+    // porque queremos que el usuario siga viendo la cuenta después de vaciar/editar.
+    if (this.viewAccountOpen) {
+      await this.load(); // Solo refresca la tabla de fondo
+    } else {
+      this.closeAll();
+      await this.load();
+    }
   }
 
   async onSaleCreated() {
-    this.closeAll();
     await this.load();
   }
 

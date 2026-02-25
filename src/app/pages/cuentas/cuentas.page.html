@@ -56,7 +56,7 @@
 
     <div class="flex gap-2">
       <button
-        class="btn btn-primary"
+        class="btn btn-neutral"
         (click)="openCreateAccount()"
         [disabled]="!canAccountsCreate"
         title="Requiere STREAMING_ACCOUNTS:CREATE"
@@ -375,6 +375,6 @@
     [canSell]="canSalesCreate"
     (close)="closeAll()"
     (changed)="onAccountChanged()"
-    (saleCreated)="onSaleCreated()"
+    (saleCreated)="load()"
   ></app-view-account-modal>
 </div>

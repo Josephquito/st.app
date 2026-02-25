@@ -14,6 +14,7 @@ import { StreamingPlatformDTO } from '../../../services/streaming-platforms.serv
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './create-account.modal.html',
+  styleUrls: ['../accounts.modal.css'],
 })
 export class CreateAccountModal {
   api = inject(StreamingAccountsService);

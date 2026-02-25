@@ -30,7 +30,7 @@
 
       <!-- Tabla -->
       <div *ngIf="!loading" class="overflow-x-auto">
-        <table class="table table-zebra">
+        <table class="table table w-full">
           <thead>
             <tr>
               <th>Nombre</th>
@@ -41,13 +41,21 @@
           </thead>
 
           <tbody>
-            <tr *ngFor="let c of customers">
-              <td><div class="font-medium">{{ c.name }}</div></td>
+            <tr
+              *ngFor="let c of customers"
+              class="selectable-row"
+              (click)="goToDetail(c.id)"
+            >
+              <td>
+                <div class="font-medium">{{ c.name }}</div>
+              </td>
+
               <td>{{ c.contact || '—' }}</td>
+
               <td>{{ c.source || '—' }}</td>
 
-              <!-- Botón ⋮ -->
-              <td class="text-right">
+              <!-- Columna Acciones -->
+              <td class="text-right" (click)="$event.stopPropagation()">
                 <button
                   type="button"
                   class="btn btn-ghost btn-sm"
@@ -72,7 +80,7 @@
     </div>
   </div>
 
-  <!-- ✅ MENÚ FLOTANTE FIXED -->
+  <!-- MENÚ FLOTANTE -->
   <div
     *ngIf="menuOpen && menuCustomer"
     class="fixed z-[99999]"

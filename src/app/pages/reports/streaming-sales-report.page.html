@@ -1,0 +1,423 @@
+<div class="page">
+  <!-- Error -->
+  <div *ngIf="errorMessage" class="alert alert-error">
+    <span>{{ errorMessage }}</span>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <h1 class="title">Reporte de ventas</h1>
+      <p class="subtitle">
+        Ganancias y totales con filtros por fecha, plataforma y cliente.
+      </p>
+    </div>
+
+    <div class="flex gap-2">
+      <button
+        class="btn btn-ghost"
+        (click)="clearAllFilters()"
+        [disabled]="loading || !canRead"
+      >
+        Limpiar
+      </button>
+    </div>
+  </div>
+
+  <!-- Plataformas (tabs estilo cuentas) -->
+  <div class="platform-bar">
+    <div class="tabs tabs-boxed platform-tabs platform-tabs--wrap">
+      <a
+        class="tab platform-tab"
+        [class.tab-active]="activePlatformId === null"
+        (click)="setPlatformFilter(null)"
+      >
+        Todas
+      </a>
+
+      <ng-container *ngFor="let p of platforms">
+        <div class="platform-tab-item">
+          <a
+            class="tab platform-tab"
+            [class.tab-active]="activePlatformId === p.id"
+            (click)="setPlatformFilter(p.id)"
+            title="{{ p.name }}"
+          >
+            <span class="platform-tab-label">{{ p.name }}</span>
+          </a>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+
+  <!-- Meta -->
+  <div class="text-sm opacity-70 platform-meta">
+    Mostrando:
+    <b>{{ activePlatformId ? '1 plataforma' : 'todas' }}</b>
+    · Ventas: <b>{{ totals.salesCount }}</b> · Ganancia:
+    <b>{{ money(totals.profit) }}</b>
+  </div>
+
+  <!-- Barra filtros (search + cliente + status + date) -->
+  <div *ngIf="!loading" class="flex flex-col lg:flex-row gap-3">
+    <!-- Search cliente (como tu input con icon) -->
+    <label class="input input-bordered flex items-center gap-2 w-full">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="h-4 w-4 opacity-60"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <circle cx="11" cy="11" r="8"></circle>
+        <path d="m21 21-4.3-4.3"></path>
+      </svg>
+
+      <input
+        type="text"
+        class="grow"
+        placeholder="Buscar cliente por nombre"
+        [(ngModel)]="searchText"
+        (keyup.enter)="applyFilters()"
+      />
+    </label>
+
+    <button
+      type="button"
+      class="btn btn-ghost"
+      (click)="clearSearch()"
+      [disabled]="!searchText.trim()"
+      title="Limpiar búsqueda"
+    >
+      Limpiar
+    </button>
+
+    <!-- Cliente select -->
+    <select
+      class="select select-bordered w-full lg:w-64"
+      [(ngModel)]="customerId"
+      (change)="applyFilters()"
+    >
+      <option value="">Todos los clientes</option>
+      <option *ngFor="let c of customers" [ngValue]="c.id">{{ c.name }}</option>
+    </select>
+
+    <!-- Status -->
+    <select
+      class="select select-bordered w-full lg:w-44"
+      [(ngModel)]="status"
+      (change)="applyFilters()"
+    >
+      <option value="ACTIVE">Activas</option>
+      <option value="ALL">Todas</option>
+      <option value="CANCELED">Canceladas</option>
+    </select>
+  </div>
+
+  <!-- Date mode tabs -->
+  <div class="date-bar">
+    <div class="tabs tabs-boxed date-tabs">
+      <a
+        class="tab"
+        [class.tab-active]="dateMode === 'RANGE'"
+        (click)="setDateMode('RANGE')"
+        >Rango</a
+      >
+      <a
+        class="tab"
+        [class.tab-active]="dateMode === 'DAY'"
+        (click)="setDateMode('DAY')"
+        >Día</a
+      >
+    </div>
+
+    <div class="date-fields">
+      <ng-container *ngIf="dateMode === 'DAY'">
+        <input
+          type="date"
+          class="input input-bordered w-full sm:w-56"
+          [(ngModel)]="day"
+          (change)="applyFilters()"
+        />
+      </ng-container>
+
+      <ng-container *ngIf="dateMode === 'RANGE'">
+        <input
+          type="date"
+          class="input input-bordered w-full sm:w-56"
+          [(ngModel)]="from"
+          (change)="applyFilters()"
+        />
+        <input
+          type="date"
+          class="input input-bordered w-full sm:w-56"
+          [(ngModel)]="to"
+          (change)="applyFilters()"
+        />
+      </ng-container>
+    </div>
+
+    <div class="date-right">
+      <select
+        class="select select-bordered w-full sm:w-44"
+        [(ngModel)]="pageSize"
+        (change)="changePageSize()"
+      >
+        <option [ngValue]="25">25 / pag</option>
+        <option [ngValue]="50">50 / pag</option>
+        <option [ngValue]="100">100 / pag</option>
+        <option [ngValue]="200">200 / pag</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- KPI CARDS -->
+  <div class="kpi-grid">
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body">
+        <div class="kpi-label">Ventas</div>
+        <div class="kpi-value">{{ totals.salesCount }}</div>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body">
+        <div class="kpi-label">Ingresos</div>
+        <div class="kpi-value">{{ money(totals.revenue) }}</div>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body">
+        <div class="kpi-label">Costo</div>
+        <div class="kpi-value">{{ money(totals.cost) }}</div>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body">
+        <div class="kpi-label">Ganancia</div>
+        <div class="kpi-value">{{ money(totals.profit) }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts (cards) -->
+  <div class="charts-grid">
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body">
+        <div class="chart-head">
+          <div>
+            <div class="font-semibold">Ganancia por día</div>
+            <div class="text-sm opacity-70">Según filtros actuales</div>
+          </div>
+          <div *ngIf="loadingCharts" class="flex items-center gap-2">
+            <span class="loading loading-spinner loading-sm"></span>
+            <span class="text-sm">Cargando...</span>
+          </div>
+        </div>
+
+        <div *ngIf="!loadingCharts && byDay.length === 0" class="empty">
+          No hay datos para graficar.
+        </div>
+
+        <div *ngIf="byDay.length > 0" class="bars">
+          <div class="bar-row" *ngFor="let p of byDay">
+            <div class="bar-label">{{ p.day }}</div>
+            <div class="bar-track">
+              <div
+                class="bar-fill"
+                [style.width]="barWidth(p.profit, maxProfitByDay())"
+              ></div>
+            </div>
+            <div class="bar-value">{{ money(p.profit) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body">
+        <div class="chart-head">
+          <div>
+            <div class="font-semibold">Ingresos por plataforma</div>
+            <div class="text-sm opacity-70">Ordenado por revenue</div>
+          </div>
+          <div *ngIf="loadingCharts" class="flex items-center gap-2">
+            <span class="loading loading-spinner loading-sm"></span>
+            <span class="text-sm">Cargando...</span>
+          </div>
+        </div>
+
+        <div *ngIf="!loadingCharts && byPlatform.length === 0" class="empty">
+          No hay datos para graficar.
+        </div>
+
+        <div *ngIf="byPlatform.length > 0" class="bars">
+          <div class="bar-row" *ngFor="let p of byPlatform">
+            <div class="bar-label">{{ p.platformName }}</div>
+            <div class="bar-track">
+              <div
+                class="bar-fill"
+                [style.width]="barWidth(p.revenue, maxRevenueByPlatform())"
+              ></div>
+            </div>
+            <div class="bar-value">{{ money(p.revenue) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla -->
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body">
+      <div *ngIf="loading" class="flex items-center gap-2">
+        <span class="loading loading-spinner loading-md"></span>
+        <span>Cargando ventas...</span>
+      </div>
+
+      <div *ngIf="!loading" class="overflow-x-auto">
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="no-wrap">Fecha</th>
+              <th class="no-wrap">Plataforma</th>
+              <th class="no-wrap">Cliente</th>
+              <th class="no-wrap">Cuenta</th>
+              <th class="no-wrap">Perfil</th>
+              <th class="no-wrap text-right">Precio</th>
+              <th class="no-wrap text-right">Costo</th>
+              <th class="no-wrap text-right">Ganancia</th>
+              <th class="no-wrap">Estado</th>
+              <th class="no-wrap text-right">Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let r of items" class="row-click" title="Ver detalles">
+              <td class="no-wrap text-sm text-gray-500">
+                {{ r.saleDate ? (r.saleDate | date : 'mediumDate') : '—' }}
+              </td>
+
+              <td class="no-wrap">
+                <div class="font-medium">
+                  {{ r.platform?.name || ('#' + r.platformId) }}
+                </div>
+              </td>
+
+              <td
+                class="no-wrap max-w-[220px]"
+                [title]="r.customer?.name || ''"
+              >
+                <div class="font-medium">
+                  {{ r.customer?.name || ('#' + r.customerId) }}
+                </div>
+              </td>
+
+              <td
+                class="no-wrap font-mono max-w-[220px]"
+                [title]="r.account?.email || ''"
+              >
+                {{ r.account?.email || ('#' + r.accountId) }}
+              </td>
+
+              <td class="no-wrap">
+                <span class="badge badge-outline"
+                  >{{ r.profile?.profileNo || '—' }}</span
+                >
+              </td>
+
+              <td class="no-wrap text-right">{{ money(r.salePrice) }}</td>
+              <td class="no-wrap text-right">{{ money(r.costAtSale) }}</td>
+              <td class="no-wrap text-right font-semibold">
+                {{ money(r.profit) }}
+              </td>
+
+              <td class="no-wrap">
+                <span
+                  class="badge"
+                  [class.badge-success]="r.status === 'ACTIVE'"
+                  [class.badge-ghost]="r.status !== 'ACTIVE'"
+                >
+                  {{ r.status }}
+                </span>
+              </td>
+
+              <td class="no-wrap text-right" (click)="$event.stopPropagation()">
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-sm"
+                  (click)="toggleMenu(r, $event)"
+                  aria-label="Acciones"
+                  title="Acciones"
+                >
+                  ⋮
+                </button>
+              </td>
+            </tr>
+
+            <tr *ngIf="items.length === 0">
+              <td colspan="10" class="text-center text-gray-500 py-6">
+                No hay ventas para esos filtros.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Paginación -->
+      <div class="pager" *ngIf="!loading && total > 0">
+        <div class="text-sm opacity-70">
+          Total: <b>{{ total }}</b> · Página <b>{{ page }}</b> /
+          <b>{{ totalPages }}</b>
+        </div>
+
+        <div class="flex gap-2">
+          <button
+            class="btn btn-ghost btn-sm"
+            (click)="goPrev()"
+            [disabled]="page <= 1 || loading"
+          >
+            ← Anterior
+          </button>
+          <button
+            class="btn btn-ghost btn-sm"
+            (click)="goNext()"
+            [disabled]="page >= totalPages || loading"
+          >
+            Siguiente →
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Menú flotante (simple) -->
+  <div
+    *ngIf="menuOpen && menuItem"
+    class="fixed z-[99999]"
+    [style.left.px]="menuX"
+    [style.top.px]="menuY"
+    style="transform: translateX(-100%)"
+    (click)="$event.stopPropagation()"
+  >
+    <div class="bg-base-100 shadow rounded-box w-56 border border-base-200">
+      <ul class="menu p-2">
+        <li>
+          <button type="button" (click)="closeMenu()">Cerrar</button>
+        </li>
+
+        <li *ngIf="menuItem?.notes">
+          <div class="px-3 py-2 text-sm opacity-70">
+            <div class="font-semibold mb-1">Notas</div>
+            <div class="break-words">{{ menuItem.notes }}</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>

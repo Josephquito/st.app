@@ -48,6 +48,25 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/cuentas/cuentas.page').then((m) => m.CuentasPage),
   },
+  {
+    path: 'reportes',
+    canActivate: [CompanySelectedGuard, PermissionGuard],
+
+    data: { permissions: ['STREAMING_SALES:READ'] },
+    loadComponent: () =>
+      import('./pages/reports/streaming-sales-report.page').then(
+        (m) => m.StreamingSalesReportPage,
+      ),
+  },
+  {
+    path: 'customer/:id',
+    canActivate: [CompanySelectedGuard, PermissionGuard],
+    data: { permissions: ['CUSTOMERS:READ'] },
+    loadComponent: () =>
+      import('./pages/customer-detail/customer-detail.page').then(
+        (m) => m.CustomerDetailPage,
+      ),
+  },
 
   { path: '**', redirectTo: 'correo' },
 ];

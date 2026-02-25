@@ -1,5 +1,6 @@
 import { Component, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router'; // <--- Importante
 
 import { AuthService } from '../../services/auth.service';
 import {
@@ -26,6 +27,7 @@ import { DeleteCustomerModal } from '../../modales/customers/delete-customer/del
 export class CustomersPage {
   api = inject(CustomersService);
   auth = inject(AuthService);
+  private router = inject(Router); // <--- Inyectar Router
 
   loading = false;
   loadingRowId: number | null = null;
@@ -72,7 +74,6 @@ export class CustomersPage {
         'No tienes permiso para ver clientes (CUSTOMERS:READ).';
       return;
     }
-
     this.loading = true;
     try {
       this.customers = await this.api.findAll();
@@ -81,6 +82,12 @@ export class CustomersPage {
     } finally {
       this.loading = false;
     }
+  }
+
+  // ✅ Nueva función de navegación
+  goToDetail(customerId: number) {
+    // Usamos la ruta que definiste en tu routing
+    this.router.navigate(['/customer', customerId]);
   }
 
   // acciones header
@@ -94,18 +101,14 @@ export class CustomersPage {
   // menú
   toggleMenu(c: CustomerDTO, ev: MouseEvent) {
     ev.stopPropagation();
-
     if (this.menuOpen && this.menuCustomer?.id === c.id) {
       this.closeMenu();
       return;
     }
-
     this.menuOpen = true;
     this.menuCustomer = c;
-
     const target = ev.currentTarget as HTMLElement;
     const rect = target.getBoundingClientRect();
-
     this.menuX = rect.right;
     this.menuY = rect.bottom + 6;
   }
@@ -115,17 +118,13 @@ export class CustomersPage {
     this.menuCustomer = null;
   }
 
-  @HostListener('document:click')
-  onDocClick() {
+  @HostListener('document:click') onDocClick() {
+    this.closeMenu();
+  }
+  @HostListener('window:scroll') onScroll() {
     this.closeMenu();
   }
 
-  @HostListener('window:scroll')
-  onScroll() {
-    this.closeMenu();
-  }
-
-  // modales
   openEdit(c: CustomerDTO) {
     this.selected = c;
     this.editOpen = true;
@@ -151,12 +150,10 @@ export class CustomersPage {
     this.closeAll();
     this.load();
   }
-
   onUpdated() {
     this.closeAll();
     this.load();
   }
-
   onDeleted() {
     this.closeAll();
     this.load();

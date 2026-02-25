@@ -1,0 +1,179 @@
+<div class="page">
+  <!-- Header -->
+  <div class="header">
+    <button
+      routerLink="/customers"
+      class="btn btn-circle btn-ghost"
+      title="Volver"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="h-6 w-6"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M15 19l-7-7 7-7"
+        />
+      </svg>
+    </button>
+
+    <div class="title-wrap">
+      <h1 class="title">{{ report?.customer?.name || 'Cliente' }}</h1>
+      <p class="subtitle">Historial de servicios y accesos</p>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="errorMessage" class="alert alert-error">
+    <span>{{ errorMessage }}</span>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading-wrap">
+    <span class="loading loading-ring loading-lg text-primary"></span>
+    <div class="opacity-60 text-sm mt-3">Cargando historial...</div>
+  </div>
+
+  <!-- Content -->
+  <div *ngIf="report && !loading" class="grid">
+    <!-- Left -->
+    <div class="left">
+      <div class="stats stats-vertical shadow w-full">
+        <div class="stat">
+          <div class="stat-title">Inversión Total</div>
+          <div class="stat-value text-success text-2xl">
+            ${{ report.metrics.totalSpent | number : '1.2-2' }}
+          </div>
+        </div>
+        <div class="stat">
+          <div class="stat-title">Servicios Activos</div>
+          <div class="stat-value text-primary text-2xl">
+            {{ report.metrics.activeSales }}
+          </div>
+        </div>
+      </div>
+
+      <div class="card bg-base-100 shadow-sm border border-base-200">
+        <div class="card-body p-4">
+          <h3 class="card-title text-base">Información</h3>
+
+          <div class="info-block">
+            <div class="info-label">Contacto</div>
+            <div class="info-row">
+              <div class="info-value">{{ report.customer.contact || '—' }}</div>
+
+              <button
+                *ngIf="report.customer.contact"
+                class="btn btn-ghost btn-xs"
+                type="button"
+                (click)="copyToClipboard(report.customer.contact)"
+                title="Copiar"
+              >
+                Copiar
+              </button>
+            </div>
+          </div>
+
+          <div class="divider my-2"></div>
+
+          <div class="info-block">
+            <div class="info-label">Origen</div>
+            <div class="info-value">
+              {{ report.customer.source || 'No especificado' }}
+            </div>
+          </div>
+
+          <div *ngIf="copied" class="copied-tip">Copiado ✔</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right -->
+    <div class="right">
+      <div class="card bg-base-100 shadow-sm border border-base-200">
+        <div class="card-body p-4 pb-0">
+          <div class="table-head">
+            <h3 class="card-title text-base">Historial</h3>
+            <div class="opacity-60 text-xs">
+              {{ report.history.length }} registro(s)
+            </div>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="table table w-full">
+            <thead>
+              <tr class="bg-base-200/50">
+                <th>Plataforma</th>
+                <th>Acceso (Email / Pass)</th>
+                <th>Corte</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr *ngFor="let s of report.history">
+                <td class="platform-cell">
+                  <div class="font-bold">{{ s.platform.name }}</div>
+                  <div class="text-[10px] opacity-50">
+                    {{ s.saleDate | date : 'shortDate' }}
+                  </div>
+                </td>
+
+                <td>
+                  <div class="cred-wrap">
+                    <button
+                      type="button"
+                      class="cred"
+                      (click)="copyToClipboard(s.account.email)"
+                      title="Click para copiar"
+                    >
+                      <code class="text-xs">{{ s.account.email }}</code>
+                    </button>
+
+                    <button
+                      type="button"
+                      class="cred"
+                      (click)="copyToClipboard(s.account.password)"
+                      title="Click para copiar"
+                    >
+                      <code class="text-xs"
+                        >Pass: {{ s.account.password }}</code
+                      >
+                    </button>
+                  </div>
+                </td>
+
+                <td>
+                  <span class="text-sm">
+                    {{ s.cutoffDate | date : 'mediumDate' }}
+                  </span>
+                </td>
+
+                <td>
+                  <span
+                    class="badge badge-sm"
+                    [ngClass]="statusBadge(s.status)"
+                  >
+                    {{ s.status }}
+                  </span>
+                </td>
+              </tr>
+
+              <tr *ngIf="report.history.length === 0">
+                <td colspan="4" class="text-center text-gray-500 py-8">
+                  No hay historial para este cliente.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

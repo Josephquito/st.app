@@ -3,7 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 
-export type SaleStatus = 'ACTIVE' | 'CANCELLED';
+// Ajustamos a 'CANCELED' con una sola L para que coincida con tu base de datos
+export type SaleStatus = 'ACTIVE' | 'CANCELED';
 
 export type StreamingSaleDTO = {
   id: number;
@@ -46,9 +47,15 @@ export type CreateStreamingSaleDto = {
   notes?: string;
 };
 
+// Actualizado para permitir edición completa según el nuevo backend
 export type UpdateStreamingSaleDto = {
+  customerId?: number;
+  profileId?: number;
+  salePrice?: string;
+  saleDate?: string;
+  daysAssigned?: number;
   notes?: string;
-  status?: 'ACTIVE' | 'CANCELLED';
+  status?: SaleStatus;
 };
 
 @Injectable({ providedIn: 'root' })
@@ -60,6 +67,12 @@ export class StreamingSalesService {
     return firstValueFrom(this.http.get<StreamingSaleDTO[]>(this.base));
   }
 
+  findOne(id: number): Promise<StreamingSaleDTO> {
+    return firstValueFrom(
+      this.http.get<StreamingSaleDTO>(`${this.base}/${id}`),
+    );
+  }
+
   create(dto: CreateStreamingSaleDto): Promise<StreamingSaleDTO> {
     return firstValueFrom(this.http.post<StreamingSaleDTO>(this.base, dto));
   }
@@ -67,6 +80,15 @@ export class StreamingSalesService {
   update(id: number, dto: UpdateStreamingSaleDto): Promise<StreamingSaleDTO> {
     return firstValueFrom(
       this.http.patch<StreamingSaleDTO>(`${this.base}/${id}`, dto),
+    );
+  }
+
+  /**
+   * Finaliza la venta y devuelve el perfil al stock (Kardex IN)
+   */
+  empty(id: number): Promise<StreamingSaleDTO> {
+    return firstValueFrom(
+      this.http.post<StreamingSaleDTO>(`${this.base}/${id}/empty`, {}),
     );
   }
 }

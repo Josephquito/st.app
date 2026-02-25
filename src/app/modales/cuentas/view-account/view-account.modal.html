@@ -38,29 +38,36 @@
             <tr *ngFor="let p of (account?.profiles || [])">
               <td class="no-wrap font-mono">#{{ p.profileNo }}</td>
 
-              <td
-                class="no-wrap max-w-[220px]"
-                [title]="getSaleForProfile(p)?.customer?.name || '—'"
-              >
-                <span class="font-medium">
+              <td class="no-wrap max-w-[220px]">
+                <span class="font-medium" *ngIf="p.status !== 'AVAILABLE'">
                   {{ getSaleForProfile(p)?.customer?.name || '—' }}
                 </span>
+                <span class="opacity-30" *ngIf="p.status === 'AVAILABLE'"
+                  >—</span
+                >
               </td>
 
               <td class="no-wrap text-sm text-gray-500">
-                {{ getSaleForProfile(p)?.saleDate ?
-                (getSaleForProfile(p)?.saleDate | date : 'mediumDate') : '—' }}
+                <ng-container *ngIf="p.status !== 'AVAILABLE'">
+                  {{ getSaleForProfile(p)?.saleDate ?
+                  (getSaleForProfile(p)?.saleDate | date : 'mediumDate') : '—'
+                  }}
+                </ng-container>
+                <span *ngIf="p.status === 'AVAILABLE'">—</span>
               </td>
 
               <td class="no-wrap text-sm text-gray-500">
-                {{ getSaleForProfile(p)?.cutoffDate ?
-                (getSaleForProfile(p)?.cutoffDate | date : 'mediumDate') : '—'
-                }}
+                <ng-container *ngIf="p.status !== 'AVAILABLE'">
+                  {{ getSaleForProfile(p)?.cutoffDate ?
+                  (getSaleForProfile(p)?.cutoffDate | date : 'mediumDate') : '—'
+                  }}
+                </ng-container>
+                <span *ngIf="p.status === 'AVAILABLE'">—</span>
               </td>
 
               <td class="no-wrap">
                 <ng-container
-                  *ngIf="daysRemaining(getSaleForProfile(p)?.cutoffDate) as d; else noalert"
+                  *ngIf="p.status !== 'AVAILABLE' && daysRemaining(getSaleForProfile(p)?.cutoffDate) as d; else noalert"
                 >
                   <span class="badge" [ngClass]="alertBadgeClass(d)">
                     {{ d < 0 ? ('Hace ' + (d * -1) + ' días') : d === 0 ? 'Vence
@@ -171,3 +178,60 @@
     (created)="onSaleDone()"
   ></app-create-sale-modal>
 </dialog>
+<app-edit-sale-modal
+  [open]="editSaleOpen"
+  [sale]="selectedSale"
+  [account]="account"
+  (close)="editSaleOpen = false; selectedSale = null"
+  (updated)="onSaleUpdated()"
+></app-edit-sale-modal>
+
+<div
+  class="modal"
+  [class.modal-open]="confirmEmptyOpen"
+  style="z-index: 9999999"
+>
+  <div class="modal-box border-t-4 border-warning">
+    <div class="flex items-center gap-3 text-warning mb-3">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="stroke-current shrink-0 h-6 w-6"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+        />
+      </svg>
+      <h3 class="font-bold text-lg">¿Desocupar perfil?</h3>
+    </div>
+
+    <p class="py-4 text-sm">
+      Estás a punto de vaciar el
+      <strong>Perfil #{{ profileToEmpty?.profileNo }}</strong>. El cliente ya no
+      tendrá acceso y el perfil volverá a estar <strong>Disponible</strong> para
+      la venta.
+    </p>
+
+    <div class="modal-action">
+      <button
+        class="btn btn-ghost"
+        (click)="cancelEmpty()"
+        [disabled]="loading"
+      >
+        Cancelar
+      </button>
+      <button
+        class="btn btn-warning"
+        (click)="confirmEmpty()"
+        [disabled]="loading"
+      >
+        <span *ngIf="loading" class="loading loading-spinner"></span>
+        Sí, vaciar perfil
+      </button>
+    </div>
+  </div>
+</div>

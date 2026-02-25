@@ -23,3 +23,12 @@
   font-size: 14px;
   color: #6b7280;
 }
+/* Fila seleccionable */
+.selectable-row {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.selectable-row:hover td {
+  background: rgba(0, 0, 0, 0.04);
+}

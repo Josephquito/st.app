@@ -41,6 +41,12 @@
         >
           Cuentas
         </a>
+        <a
+          *ngIf="auth.hasPermission('STREAMING_SALES:READ')"
+          routerLink="/reportes"
+        >
+          Reportes
+        </a>
 
         <!-- Aquí luego agregas más módulos de empresa -->
       </ng-template>
@@ -202,6 +208,14 @@
       (click)="closeMobileMenu()"
     >
       Cuentas
+    </a>
+    <a
+      *ngIf="auth.hasPermission('STREAMING_SALES:READ')"
+      class="mobile-link"
+      routerLink="/reportes"
+      (click)="closeMobileMenu()"
+    >
+      Reportes
     </a>
 
     <!-- Aquí luego agregas más módulos de empresa -->

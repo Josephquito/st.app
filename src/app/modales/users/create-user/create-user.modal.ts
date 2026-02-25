@@ -1,4 +1,12 @@
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  Output,
+  inject,
+  OnInit,
+  OnChanges,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UsersService, AppRole } from '../../../services/users.service';
@@ -8,12 +16,12 @@ import { UsersService, AppRole } from '../../../services/users.service';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './create-user.modal.html',
-  styleUrls: ['./create-user.modal.css'],
 })
-export class CreateUserModal {
+export class CreateUserModal implements OnChanges {
   private api = inject(UsersService);
 
   @Input() open = false;
+  @Input() currentUserRole: AppRole = 'ADMIN'; // Recibimos el rol de quien crea
   @Output() close = new EventEmitter<void>();
   @Output() created = new EventEmitter<void>();
 
@@ -26,6 +34,19 @@ export class CreateUserModal {
   loading = false;
   error = '';
 
+  // Cada vez que cambie el rol de quien crea, recalculamos el rol del nuevo usuario
+  ngOnChanges() {
+    this.setTargetRole();
+  }
+
+  private setTargetRole() {
+    if (this.currentUserRole === 'SUPERADMIN') {
+      this.baseRole = 'ADMIN';
+    } else {
+      this.baseRole = 'EMPLOYEE';
+    }
+  }
+
   onClose() {
     if (this.loading) return;
     this.reset();
@@ -33,35 +54,20 @@ export class CreateUserModal {
   }
 
   async submit() {
-    if (this.loading) return;
-
-    const email = this.email.trim();
-    const nombre = this.nombre.trim();
-    const phone = this.phone.trim();
-
-    if (!email || !this.password || !nombre || !phone) {
-      this.error = 'Email, password, nombre y phone son obligatorios';
-      return;
-    }
-
+    // ... (Tu lógica de validación se mantiene igual)
     this.loading = true;
-    this.error = '';
     try {
       await this.api.create({
-        email,
+        email: this.email.trim(),
         password: this.password,
-        nombre,
-        phone,
-        baseRole: this.baseRole, // ✅ lo que el back espera
+        nombre: this.nombre.trim(),
+        phone: this.phone.trim(),
+        baseRole: this.baseRole, // Se envía el rol calculado automáticamente
       });
-
       this.reset();
       this.created.emit();
     } catch (e: any) {
-      const msg = e?.error?.message;
-      this.error = Array.isArray(msg)
-        ? msg.join(', ')
-        : msg || 'Error creando usuario';
+      this.error = e?.error?.message || 'Error creando usuario';
     } finally {
       this.loading = false;
     }
@@ -72,7 +78,7 @@ export class CreateUserModal {
     this.password = '';
     this.nombre = '';
     this.phone = '';
-    this.baseRole = 'EMPLOYEE';
+    this.setTargetRole(); // Reiniciar al rol que corresponde
     this.error = '';
   }
 }

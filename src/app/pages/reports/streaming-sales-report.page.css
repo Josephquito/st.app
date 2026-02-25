@@ -1,0 +1,224 @@
+.page {
+  padding: 16px;
+  max-width: 1300px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+/* ===========
+   Tabs bar (igual que cuentas)
+   =========== */
+.platform-bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.platform-meta {
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+.platform-tabs--wrap {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  min-height: 52px;
+}
+
+.platform-tab-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.platform-tab {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 12px;
+  line-height: 36px;
+  white-space: nowrap;
+}
+
+.platform-tab-label {
+  display: inline-block;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+/* ===========
+   Date bar
+   =========== */
+.date-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.date-tabs {
+  padding: 6px;
+}
+
+.date-fields {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.date-right {
+  margin-left: auto;
+}
+
+/* ===========
+   KPI
+   =========== */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (min-width: 768px) {
+  .kpi-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.kpi-label {
+  font-size: 0.85rem;
+  opacity: 0.65;
+}
+
+.kpi-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  margin-top: 6px;
+}
+
+/* ===========
+   Charts
+   =========== */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 1024px) {
+  .charts-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.chart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.empty {
+  padding: 18px 0;
+  text-align: center;
+  opacity: 0.7;
+}
+
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 90px;
+  gap: 10px;
+  align-items: center;
+}
+
+.bar-label {
+  font-size: 0.85rem;
+  opacity: 0.75;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bar-track {
+  height: 10px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(0, 116, 133, 0.9);
+}
+
+.bar-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+/* ===========
+   Tabla UX (igual que cuentas)
+   =========== */
+.row-click {
+  cursor: pointer;
+}
+
+.row-click:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.font-mono {
+  word-break: break-all;
+}
+
+.no-wrap {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+}

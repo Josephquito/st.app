@@ -2,15 +2,12 @@
   <div class="modal-box max-w-3xl">
     <h3 class="font-bold text-lg">Editar cuenta</h3>
 
-    <p class="text-sm opacity-70 mt-1">
-      {{ account?.platform?.name || '—' }} · {{ account?.email || '—' }}
-    </p>
-
     <div *ngIf="errorMessage" class="alert alert-error mt-3">
       <span>{{ errorMessage }}</span>
     </div>
 
     <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+      <!-- Plataforma (igual) -->
       <label class="form-control">
         <div class="label"><span class="label-text">Plataforma</span></div>
         <select class="select select-bordered" [(ngModel)]="platformId">
@@ -21,40 +18,105 @@
         </select>
       </label>
 
-      <label class="form-control">
-        <div class="label"><span class="label-text">Proveedor</span></div>
-        <select class="select select-bordered" [(ngModel)]="supplierId">
-          <option [ngValue]="null" disabled>Selecciona...</option>
-          <option *ngFor="let s of suppliers" [ngValue]="s.id">
-            {{ s.name }}
-          </option>
-        </select>
+      <!-- Proveedor (BUSCADOR + crear si no existe) -->
+      <div class="form-control relative">
+        <div class="label">
+          <span class="label-text">Proveedor</span>
+        </div>
+
+        <input
+          class="input input-bordered w-full"
+          [(ngModel)]="supplierQuery"
+          (input)="onSupplierQueryChange()"
+          (focus)="supplierDropdownOpen = true"
+          (blur)="onSupplierBlur()"
+          (keydown.enter)="onSupplierEnter($event)"
+          placeholder="Busca por nombre/contacto o escribe para crear (ej: @juanpa)"
+        />
+
         <div class="label">
           <span class="label-text-alt opacity-70" *ngIf="suppliersLoading">
             Cargando proveedores...
           </span>
+          <span
+            class="label-text-alt opacity-70"
+            *ngIf="!suppliersLoading && supplierId"
+          >
+            Seleccionado: <b>{{ getSupplierLabelById(supplierId) }}</b>
+          </span>
         </div>
-      </label>
 
+        <!-- Dropdown resultados -->
+        <div
+          *ngIf="supplierDropdownOpen && supplierQuery.trim().length > 0"
+          class="absolute z-50 mt-1 w-full rounded-box border bg-base-100 shadow"
+        >
+          <ul class="menu p-2">
+            <!-- Resultados existentes -->
+            <li *ngFor="let s of supplierMatches; trackBy: trackSupplier">
+              <button
+                type="button"
+                class="justify-between"
+                (mousedown)="selectSupplier(s)"
+              >
+                <span class="truncate">
+                  {{ s.name }}
+                  <span class="opacity-60" *ngIf="s.contact"
+                    >· {{ s.contact }}</span
+                  >
+                </span>
+                <span class="badge badge-ghost">Elegir</span>
+              </button>
+            </li>
+
+            <!-- Crear nuevo si no hay match exacto -->
+            <li *ngIf="canCreateSupplierFromQuery()">
+              <button
+                type="button"
+                class="justify-between"
+                (mousedown)="createSupplierFromQuery()"
+                [disabled]="creatingSupplier"
+              >
+                <span class="truncate">
+                  Crear: <b>"{{ supplierQuery.trim() }}"</b>
+                </span>
+                <span class="badge badge-neutral">
+                  <span
+                    *ngIf="creatingSupplier"
+                    class="loading loading-spinner loading-xs"
+                  ></span>
+                  <span *ngIf="!creatingSupplier">Crear</span>
+                </span>
+              </button>
+            </li>
+
+            <!-- Sin resultados -->
+            <li
+              *ngIf="supplierMatches.length === 0 && !canCreateSupplierFromQuery()"
+            >
+              <span class="opacity-70">Sin resultados</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Email -->
       <label class="form-control">
         <div class="label"><span class="label-text">Email</span></div>
         <input class="input input-bordered" [(ngModel)]="email" />
       </label>
 
+      <!-- Password -->
       <label class="form-control">
         <div class="label">
-          <span class="label-text">Clave (texto plano)</span>
+          <span class="label-text">Clave</span>
         </div>
         <input class="input input-bordered" [(ngModel)]="password" />
       </label>
 
+      <!-- Profiles -->
       <label class="form-control">
-        <div class="label">
-          <span class="label-text">Perfiles total</span>
-          <span class="label-text-alt opacity-70">
-            (tu backend hará IN/ADJUST OUT y bloqueará perfiles)
-          </span>
-        </div>
+        <div class="label"><span class="label-text">Perfiles total</span></div>
         <input
           class="input input-bordered"
           type="number"
@@ -62,19 +124,19 @@
         />
       </label>
 
-      <label class="form-control">
-        <div class="label"><span class="label-text">Estado</span></div>
-        <select class="select select-bordered" [(ngModel)]="status">
-          <option [ngValue]="'ACTIVE'">ACTIVE</option>
-          <option [ngValue]="'INACTIVE'">INACTIVE</option>
-        </select>
-      </label>
-
+      <!-- Total cost -->
       <label class="form-control">
         <div class="label"><span class="label-text">Costo total</span></div>
-        <input class="input input-bordered" [(ngModel)]="totalCost" />
+        <input
+          class="input input-bordered"
+          [ngModel]="totalCost"
+          (ngModelChange)="onTotalCostChange($event)"
+          placeholder="12,50 o 12.50"
+          inputmode="decimal"
+        />
       </label>
 
+      <!-- Purchase date -->
       <label class="form-control">
         <div class="label"><span class="label-text">Fecha compra</span></div>
         <input
@@ -84,15 +146,44 @@
         />
       </label>
 
-      <label class="form-control">
-        <div class="label"><span class="label-text">Fecha corte</span></div>
-        <input
-          class="input input-bordered"
-          type="date"
-          [(ngModel)]="cutoffDate"
-        />
-      </label>
+      <!-- Periodo / Fecha corte (calculada) -->
+      <div class="form-control">
+        <div class="label">
+          <span class="label-text">Días asignados</span>
+        </div>
 
+        <div class="flex gap-2 flex-wrap">
+          <select
+            class="select select-bordered"
+            [ngModel]="periodMonths"
+            (ngModelChange)="onPeriodMonthsChange($event)"
+          >
+            <option [ngValue]="null">Meses (opcional)</option>
+            <option [ngValue]="1">1 mes</option>
+            <option [ngValue]="3">3 meses</option>
+            <option [ngValue]="6">6 meses</option>
+            <option [ngValue]="12">12 meses</option>
+          </select>
+
+          <input
+            class="input input-bordered flex-1 min-w-[140px]"
+            type="number"
+            [ngModel]="periodDays"
+            (ngModelChange)="onPeriodDaysChange($event)"
+            placeholder="Días (ej: 30, 60, 180)"
+            min="1"
+          />
+        </div>
+
+        <div class="label">
+          <span class="label-text-alt opacity-70">
+            Fecha de corte:
+            <b>{{ cutoffDate || '—' }}</b>
+          </span>
+        </div>
+      </div>
+
+      <!-- Notes -->
       <label class="form-control md:col-span-2">
         <div class="label"><span class="label-text">Notas</span></div>
         <textarea
@@ -103,10 +194,21 @@
     </div>
 
     <div class="modal-action">
-      <button class="btn" (click)="onClose()" [disabled]="loading">
+      <button
+        class="btn"
+        type="button"
+        (click)="onClose()"
+        [disabled]="loading || creatingSupplier"
+      >
         Cancelar
       </button>
-      <button class="btn btn-primary" (click)="submit()" [disabled]="loading">
+
+      <button
+        class="btn btn-primary"
+        type="button"
+        (click)="submit()"
+        [disabled]="loading || creatingSupplier"
+      >
         <span *ngIf="loading" class="loading loading-spinner loading-sm"></span>
         Guardar
       </button>
@@ -114,6 +216,6 @@
   </div>
 
   <form method="dialog" class="modal-backdrop">
-    <button (click)="onClose()">close</button>
+    <button type="button" (click)="onClose()">close</button>
   </form>
 </dialog>
