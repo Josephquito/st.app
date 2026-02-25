@@ -5,8 +5,7 @@ import { PermissionGuard } from './guards/permission.guard';
 import { CompanySelectedGuard } from './guards/company-selected.guard';
 
 export const routes: Routes = [
-  // Redirección inicial simple a usuarios
-  { path: '', redirectTo: 'users', pathMatch: 'full' },
+  { path: '', redirectTo: 'correo', pathMatch: 'full' },
 
   { path: 'login', component: LoginComponent, canActivate: [GuestGuard] },
 
@@ -22,12 +21,12 @@ export const routes: Routes = [
   {
     path: 'companies',
     canActivate: [PermissionGuard],
-    data: { permissions: ['COMPANIES:READ'] },
+    data: { permissions: ['COMPANIES:READ'] }, // ajusta a tu permiso real
     loadComponent: () =>
       import('./pages/companies/companies.page').then((m) => m.CompaniesPage),
   },
 
-  // NIVEL 2 (scoped)
+  // NIVEL 2 (scoped) => requiere company seleccionada + permiso
   {
     path: 'suppliers',
     canActivate: [CompanySelectedGuard, PermissionGuard],
@@ -35,6 +34,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/suppliers/suppliers.page').then((m) => m.SuppliersPage),
   },
+
   {
     path: 'customers',
     canActivate: [CompanySelectedGuard, PermissionGuard],
@@ -42,6 +42,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/customers/customers.page').then((m) => m.CustomersPage),
   },
+
   {
     path: 'accounts',
     canActivate: [CompanySelectedGuard, PermissionGuard],
@@ -49,6 +50,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/cuentas/cuentas.page').then((m) => m.CuentasPage),
   },
+
   {
     path: 'reportes',
     canActivate: [CompanySelectedGuard, PermissionGuard],
@@ -58,6 +60,7 @@ export const routes: Routes = [
         (m) => m.StreamingSalesReportPage,
       ),
   },
+
   {
     path: 'customer/:id',
     canActivate: [CompanySelectedGuard, PermissionGuard],
@@ -68,6 +71,5 @@ export const routes: Routes = [
       ),
   },
 
-  // Cualquier otra ruta inexistente vuelve a intentar entrar a users
   { path: '**', redirectTo: 'users' },
 ];
