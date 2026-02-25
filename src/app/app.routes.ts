@@ -5,7 +5,8 @@ import { PermissionGuard } from './guards/permission.guard';
 import { CompanySelectedGuard } from './guards/company-selected.guard';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'correo', pathMatch: 'full' },
+  // Redirección inicial simple a usuarios
+  { path: '', redirectTo: 'users', pathMatch: 'full' },
 
   { path: 'login', component: LoginComponent, canActivate: [GuestGuard] },
 
@@ -21,12 +22,12 @@ export const routes: Routes = [
   {
     path: 'companies',
     canActivate: [PermissionGuard],
-    data: { permissions: ['COMPANIES:READ'] }, // ajusta a tu permiso real
+    data: { permissions: ['COMPANIES:READ'] },
     loadComponent: () =>
       import('./pages/companies/companies.page').then((m) => m.CompaniesPage),
   },
 
-  // NIVEL 2 (scoped) => requiere company seleccionada + permiso
+  // NIVEL 2 (scoped)
   {
     path: 'suppliers',
     canActivate: [CompanySelectedGuard, PermissionGuard],
@@ -51,7 +52,6 @@ export const routes: Routes = [
   {
     path: 'reportes',
     canActivate: [CompanySelectedGuard, PermissionGuard],
-
     data: { permissions: ['STREAMING_SALES:READ'] },
     loadComponent: () =>
       import('./pages/reports/streaming-sales-report.page').then(
@@ -68,5 +68,6 @@ export const routes: Routes = [
       ),
   },
 
-  { path: '**', redirectTo: 'correo' },
+  // Cualquier otra ruta inexistente vuelve a intentar entrar a users
+  { path: '**', redirectTo: 'users' },
 ];
