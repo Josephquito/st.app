@@ -4,8 +4,8 @@
 
     <div class="mt-2">
       <p>Vas a eliminar: <b>{{ platform?.name }}</b></p>
-      <p class="text-sm opacity-70 mt-1">
-        Si tiene relaciones, el backend rechazará la eliminación.
+      <p class="text-sm text-base-content/50 mt-1">
+        Solo se puede eliminar si no tiene cuentas ni ventas asociadas.
       </p>
     </div>
 
@@ -14,10 +14,20 @@
     </div>
 
     <div class="modal-action">
-      <button class="btn" (click)="onClose()" [disabled]="loading">
+      <button
+        class="btn"
+        type="button"
+        (click)="onClose()"
+        [disabled]="loading"
+      >
         Cancelar
       </button>
-      <button class="btn btn-error" (click)="submit()" [disabled]="loading">
+      <button
+        class="btn btn-error"
+        type="button"
+        (click)="submit()"
+        [disabled]="loading"
+      >
         <span *ngIf="loading" class="loading loading-spinner loading-sm"></span>
         Eliminar
       </button>
@@ -25,6 +35,6 @@
   </div>
 
   <form method="dialog" class="modal-backdrop">
-    <button (click)="onClose()">close</button>
+    <button type="button" (click)="onClose()">close</button>
   </form>
 </dialog>

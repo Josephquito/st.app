@@ -1,11 +1,18 @@
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  OnChanges,
+  Output,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-
 import {
   StreamingPlatformsService,
   StreamingPlatformDTO,
 } from '../../../services/streaming-platforms.service';
+import { parseApiError } from '../../../utils/error.utils';
 
 @Component({
   selector: 'app-edit-platform-modal',
@@ -13,7 +20,7 @@ import {
   imports: [CommonModule, FormsModule],
   templateUrl: './edit-platform.modal.html',
 })
-export class EditPlatformModal {
+export class EditPlatformModal implements OnChanges {
   api = inject(StreamingPlatformsService);
 
   @Input() open = false;
@@ -24,7 +31,6 @@ export class EditPlatformModal {
 
   loading = false;
   errorMessage = '';
-
   name = '';
   active = true;
 
@@ -42,7 +48,7 @@ export class EditPlatformModal {
   }
 
   async submit() {
-    if (!this.platform) return;
+    if (!this.platform || this.loading) return;
 
     this.errorMessage = '';
     if (!this.name.trim()) {
@@ -59,8 +65,7 @@ export class EditPlatformModal {
       this.updated.emit();
       this.onClose();
     } catch (e: any) {
-      this.errorMessage =
-        e?.error?.message ?? 'No se pudo actualizar la plataforma.';
+      this.errorMessage = parseApiError(e);
     } finally {
       this.loading = false;
     }

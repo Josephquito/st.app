@@ -3,17 +3,19 @@ import {
   Component,
   EventEmitter,
   Input,
+  OnChanges,
   Output,
-  inject,
   SimpleChanges,
+  inject,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import {
   PermissionsApi,
   PermissionDTO,
 } from '../../../services/permissions.service';
 import { AuthService } from '../../../services/auth.service';
 import { UserDTO } from '../../../services/users.service';
-import { FormsModule } from '@angular/forms';
+import { parseApiError } from '../../../utils/error.utils';
 
 type Grouped = { title: string; items: PermissionDTO[] };
 
@@ -23,7 +25,7 @@ type Grouped = { title: string; items: PermissionDTO[] };
   imports: [CommonModule, FormsModule],
   templateUrl: './edit-user-permissions.modal.html',
 })
-export class EditUserPermissionsModal {
+export class EditUserPermissionsModal implements OnChanges {
   api = inject(PermissionsApi);
   auth = inject(AuthService);
 
@@ -39,7 +41,6 @@ export class EditUserPermissionsModal {
 
   catalog: PermissionDTO[] = [];
   selectedIds = new Set<number>();
-
   search = '';
 
   get canUpdate() {
@@ -57,35 +58,42 @@ export class EditUserPermissionsModal {
   private async load() {
     this.loading = true;
     this.errorMessage = '';
-    this.selectedIds = new Set<number>();
+    this.selectedIds.clear();
 
     try {
-      // En paralelo
       const [catalog, current] = await Promise.all([
         this.api.findAll(),
         this.api.listUserPermissions(this.user!.id),
       ]);
 
-      this.catalog = catalog;
+      // Filtrar permisos internos — nunca se muestran ni se asignan desde el front
+      this.catalog = catalog.filter((p) => !p.isSystem);
       current.forEach((p) => this.selectedIds.add(p.id));
     } catch (e: any) {
-      this.errorMessage = this.normalizeMsg(e);
+      this.errorMessage = parseApiError(e);
     } finally {
       this.loading = false;
     }
   }
 
+  // ✅ Mutar el Set existente, nunca reasignar
   toggle(id: number, checked: boolean) {
     if (!this.canUpdate) return;
     if (checked) this.selectedIds.add(id);
     else this.selectedIds.delete(id);
   }
 
+  onToggle(id: number, ev: Event) {
+    if (!this.canUpdate) return;
+    const checked = !!(ev.target as HTMLInputElement)?.checked;
+    this.toggle(id, checked);
+  }
+
   isChecked(id: number) {
     return this.selectedIds.has(id);
   }
 
-  get filteredCatalog() {
+  get filteredCatalog(): PermissionDTO[] {
     const q = this.search.trim().toLowerCase();
     if (!q) return this.catalog;
 
@@ -106,29 +114,42 @@ export class EditUserPermissionsModal {
   }
 
   get grouped(): Grouped[] {
-    // Agrupa por `group` si existe; sino por resource
     const map = new Map<string, PermissionDTO[]>();
     for (const p of this.filteredCatalog) {
-      const g = p.group && p.group.trim() ? p.group : p.resource;
+      const g = p.group?.trim() ? p.group : p.resource;
       if (!map.has(g)) map.set(g, []);
       map.get(g)!.push(p);
     }
 
-    const groups: Grouped[] = Array.from(map.entries()).map(
-      ([title, items]) => ({
+    return Array.from(map.entries())
+      .map(([title, items]) => ({
         title,
         items: items
           .slice()
           .sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999)),
-      }),
-    );
+      }))
+      .sort((a, b) => a.title.localeCompare(b.title));
+  }
 
-    return groups.sort((a, b) => a.title.localeCompare(b.title));
+  // ✅ TrackBy functions — evitan que Angular re-cree nodos DOM al mutar el Set
+  trackByGroup(_: number, g: Grouped) {
+    return g.title;
+  }
+
+  trackByPermission(_: number, p: PermissionDTO) {
+    return p.id;
+  }
+
+  get selectedCount() {
+    return this.selectedIds.size;
+  }
+
+  get totalCount() {
+    return this.catalog.length;
   }
 
   async save() {
-    if (!this.user) return;
-    if (!this.canUpdate) return;
+    if (!this.user || !this.canUpdate) return;
 
     this.saving = true;
     this.errorMessage = '';
@@ -138,7 +159,7 @@ export class EditUserPermissionsModal {
       await this.api.setUserPermissions(this.user.id, ids);
       this.updated.emit();
     } catch (e: any) {
-      this.errorMessage = this.normalizeMsg(e);
+      this.errorMessage = parseApiError(e);
     } finally {
       this.saving = false;
     }
@@ -147,21 +168,5 @@ export class EditUserPermissionsModal {
   onClose() {
     this.search = '';
     this.close.emit();
-  }
-
-  private normalizeMsg(err: any): string {
-    const msg = err?.error?.message;
-    if (typeof msg === 'string') return msg;
-    if (Array.isArray(msg)) return msg.join(', ');
-    return 'Error';
-  }
-
-  onToggle(id: number, ev: Event) {
-    if (!this.canUpdate) return;
-
-    const input = ev.target as HTMLInputElement | null;
-    const checked = !!input?.checked;
-
-    this.toggle(id, checked);
   }
 }

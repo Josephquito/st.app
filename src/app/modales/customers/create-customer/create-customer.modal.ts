@@ -1,7 +1,18 @@
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  OnChanges,
+  Output,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { CustomersService } from '../../../services/customers.service';
+import {
+  CustomersService,
+  CustomerSource,
+} from '../../../services/customers.service';
+import { parseApiError } from '../../../utils/error.utils';
 
 @Component({
   selector: 'app-create-customer-modal',
@@ -9,7 +20,7 @@ import { CustomersService } from '../../../services/customers.service';
   imports: [CommonModule, FormsModule],
   templateUrl: './create-customer.modal.html',
 })
-export class CreateCustomerModal {
+export class CreateCustomerModal implements OnChanges {
   api = inject(CustomersService);
 
   @Input() open = false;
@@ -21,47 +32,95 @@ export class CreateCustomerModal {
 
   name = '';
   contact = '';
-  source = '';
+  source: CustomerSource | '' = '';
+  sourceNote = '';
+  notes = '';
+  balance = '';
+
+  suggestedName = '';
+  loadingSuggestion = false;
+
+  readonly sourceOptions: { value: CustomerSource; label: string }[] = [
+    { value: 'INSTAGRAM', label: 'Instagram' },
+    { value: 'FACEBOOK', label: 'Facebook' },
+    { value: 'WHATSAPP', label: 'WhatsApp' },
+    { value: 'REFERRAL', label: 'Referido' },
+    { value: 'OTHER', label: 'Otro' },
+  ];
+
+  get needsSourceNote() {
+    return this.source === 'OTHER';
+  }
+
+  async ngOnChanges() {
+    if (this.open) {
+      await this.loadSuggestedName();
+    }
+  }
 
   onClose() {
     this.reset();
     this.close.emit();
   }
 
-  reset() {
+  private reset() {
     this.loading = false;
     this.errorMessage = '';
     this.name = '';
     this.contact = '';
     this.source = '';
+    this.sourceNote = '';
+    this.notes = '';
+    this.balance = '';
   }
 
   async submit() {
-    this.errorMessage = '';
     if (this.loading) return;
 
-    if (this.name.trim().length < 2) {
+    const name = this.name.trim();
+    const contact = this.contact.trim();
+
+    if (name.length < 2) {
       this.errorMessage = 'El nombre debe tener al menos 2 caracteres.';
       return;
     }
-    if (this.contact.trim().length < 2) {
+    if (contact.length < 2) {
       this.errorMessage = 'El contacto debe tener al menos 2 caracteres.';
+      return;
+    }
+    if (this.source === 'OTHER' && !this.sourceNote.trim()) {
+      this.errorMessage = 'Indica el origen cuando seleccionas "Otro".';
       return;
     }
 
     this.loading = true;
+    this.errorMessage = '';
     try {
       await this.api.create({
-        name: this.name.trim(),
-        contact: this.contact.trim(),
-        source: this.source.trim().length ? this.source.trim() : undefined,
+        name,
+        contact,
+        source: this.source || undefined,
+        sourceNote: this.needsSourceNote ? this.sourceNote.trim() : undefined,
+        notes: this.notes.trim() || undefined,
+        balance: this.balance.trim() || undefined,
       });
       this.reset();
       this.created.emit();
     } catch (e: any) {
-      this.errorMessage = e?.error?.message ?? 'No se pudo crear el cliente.';
+      this.errorMessage = parseApiError(e);
     } finally {
       this.loading = false;
+    }
+  }
+  async loadSuggestedName() {
+    this.loadingSuggestion = true;
+    try {
+      const res = await this.api.getNextCustomerNumber();
+      this.suggestedName = res.suggestedName;
+    } catch {
+      this.suggestedName = '';
+    } finally {
+      this.loadingSuggestion = false;
     }
   }
 }

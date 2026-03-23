@@ -1,0 +1,76 @@
+<div class="flex flex-wrap items-center gap-2 mb-4">
+  <button
+    type="button"
+    class="btn btn-sm"
+    [class.btn-neutral]="activePlatformId === null"
+    [class.btn-ghost]="activePlatformId !== null"
+    (click)="setFilter(null)"
+  >
+    Todas
+  </button>
+
+  <ng-container *ngFor="let p of platforms">
+    <div class="flex items-center gap-0.5">
+      <button
+        type="button"
+        class="btn btn-sm"
+        [class.btn-neutral]="activePlatformId === p.id"
+        [class.btn-ghost]="activePlatformId !== p.id"
+        (click)="setFilter(p.id)"
+      >
+        {{ p.name }}
+      </button>
+      <button
+        *ngIf="canUpdate || canDelete"
+        type="button"
+        class="btn btn-ghost btn-xs btn-circle"
+        (click)="toggleMenu(p, $event)"
+      >
+        ⋮
+      </button>
+    </div>
+  </ng-container>
+
+  <button
+    *ngIf="canCreate"
+    type="button"
+    class="btn btn-ghost btn-sm"
+    (click)="createPlatform.emit()"
+  >
+    + Plataforma
+  </button>
+</div>
+
+<!-- Menú flotante -->
+<div
+  *ngIf="menuOpen && menuPlatform"
+  class="fixed z-[99999]"
+  [style.left.px]="menuX"
+  [style.top.px]="menuY"
+  style="transform: translateX(-100%)"
+  (click)="$event.stopPropagation()"
+>
+  <div class="bg-base-100 shadow rounded-box w-48 border border-base-200">
+    <ul class="menu p-2">
+      <li *ngIf="canUpdate">
+        <button type="button" (click)="onEdit(menuPlatform!)">
+          Editar plataforma
+        </button>
+      </li>
+      <li *ngIf="canUpdate">
+        <button type="button" (click)="onManageLabels(menuPlatform!)">
+          Etiquetas
+        </button>
+      </li>
+      <li *ngIf="canDelete">
+        <button
+          type="button"
+          class="text-error"
+          (click)="onDelete(menuPlatform!)"
+        >
+          Eliminar plataforma
+        </button>
+      </li>
+    </ul>
+  </div>
+</div>

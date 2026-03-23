@@ -1,4 +1,4 @@
-<!-- NAV WRAP (hide/show on scroll) -->
+<!-- NAV WRAP -->
 <header
   class="nav-wrap"
   [class.nav-wrap--visible]="navVisible"
@@ -6,61 +6,83 @@
 >
   <div class="navbar bg-base-100 shadow-sm px-4">
     <div class="flex-1">
-      <a routerLink="/" class="btn btn-ghost text-xl"> Jotavix </a>
+      <button type="button" routerLink="/" class="btn btn-ghost text-xl">
+        Jotavix
+      </button>
     </div>
 
     <!-- DESKTOP -->
     <div class="hidden lg:flex items-center gap-3">
-      <!-- NIVEL 1 (sin company): solo Usuarios + Companies -->
       <ng-container *ngIf="isLoggedIn && !hasCompany; else companyMenuDesktop">
-        <a *ngIf="auth.hasPermission('USERS:READ')" routerLink="/users">
+        <button
+          *ngIf="auth.hasPermission('USERS:READ')"
+          type="button"
+          class="menu-link"
+          routerLink="/users"
+          routerLinkActive="active"
+        >
           Usuarios
-        </a>
-
-        <a *ngIf="auth.hasPermission('COMPANIES:READ')" routerLink="/companies">
-          Companies
-        </a>
+        </button>
+        <button
+          *ngIf="auth.hasPermission('COMPANIES:READ')"
+          type="button"
+          class="menu-link"
+          routerLink="/companies"
+          routerLinkActive="active"
+        >
+          Empresas
+        </button>
       </ng-container>
 
-      <!-- NIVEL 2 (con company): menú de empresa -->
       <ng-template #companyMenuDesktop>
-        <a
+        <button
           *ngIf="isLoggedIn && auth.hasPermission('SUPPLIERS:READ')"
+          type="button"
+          class="menu-link"
           routerLink="/suppliers"
+          routerLinkActive="active"
         >
           Proveedores
-        </a>
-
-        <a *ngIf="auth.hasPermission('CUSTOMERS:READ')" routerLink="/customers">
+        </button>
+        <button
+          *ngIf="auth.hasPermission('CUSTOMERS:READ')"
+          type="button"
+          class="menu-link"
+          routerLink="/customers"
+          routerLinkActive="active"
+        >
           Clientes
-        </a>
-
-        <a
+        </button>
+        <button
           *ngIf="auth.hasPermission('STREAMING_ACCOUNTS:READ')"
+          type="button"
+          class="menu-link"
           routerLink="/accounts"
+          routerLinkActive="active"
         >
           Cuentas
-        </a>
-        <a
+        </button>
+        <button
           *ngIf="auth.hasPermission('STREAMING_SALES:READ')"
+          type="button"
+          class="menu-link"
           routerLink="/reportes"
+          routerLinkActive="active"
         >
           Reportes
-        </a>
-
-        <!-- Aquí luego agregas más módulos de empresa -->
+        </button>
       </ng-template>
 
-      <!-- SUBMENU: Empresa + Logout (DESKTOP) -->
-      <div *ngIf="isLoggedIn" #userDropdown class="dropdown dropdown-end">
+      <!-- Submenu usuario desktop -->
+      <div *ngIf="isLoggedIn" class="relative">
         <button
           type="button"
-          class="btn btn-ghost btn-sm"
+          class="btn btn-ghost btn-sm gap-1"
           (click)="toggleUserMenu($event)"
         >
-          <span class="ml-2 text-xs opacity-70">{{ displayName }}</span>
+          <span class="text-sm opacity-70">{{ displayName }}</span>
           <svg
-            class="ml-2 h-4 w-4 opacity-70"
+            class="h-4 w-4 opacity-70"
             viewBox="0 0 20 20"
             fill="currentColor"
           >
@@ -73,11 +95,10 @@
         </button>
 
         <ul
-          class="dropdown-content menu p-3 shadow-lg bg-base-100 rounded-box w-64 mt-3"
-          [class.hidden]="!userMenuOpen"
+          *ngIf="userMenuOpen"
+          class="absolute right-0 top-full mt-2 menu p-3 shadow-lg bg-base-100 rounded-box w-64 border border-base-200 z-[9999]"
           (click)="$event.stopPropagation()"
         >
-          <!-- Empresa actual (no botón) -->
           <li class="mb-1">
             <span class="text-xs uppercase opacity-60">Empresa actual</span>
           </li>
@@ -86,10 +107,7 @@
               {{ hasCompany ? activeCompanyName : "Sin empresa seleccionada" }}
             </span>
           </li>
-
           <div class="divider my-2"></div>
-
-          <!-- Cambiar empresa -->
           <li *ngIf="hasCompany">
             <button
               type="button"
@@ -99,7 +117,6 @@
               Cambiar empresa
             </button>
           </li>
-
           <li>
             <button
               type="button"
@@ -112,24 +129,24 @@
         </ul>
       </div>
 
-      <!-- Acceder (solo NO logueado) -->
-      <a
+      <button
         *ngIf="!isLoggedIn"
+        type="button"
         routerLink="/login"
-        class="menu-link"
         routerLinkActive="active"
+        class="menu-link"
       >
         Acceder
-      </a>
+      </button>
     </div>
 
-    <!-- MOBILE: hamburger -->
+    <!-- MOBILE hamburger -->
     <div class="lg:hidden">
       <button
         type="button"
         class="btn btn-ghost btn-circle hamburger"
         aria-label="Abrir menú"
-        [attr.aria-expanded]="mobileOpen ? 'true' : 'false'"
+        [attr.aria-expanded]="mobileOpen"
         (click)="toggleMobileMenu($event)"
       >
         <svg
@@ -151,91 +168,90 @@
   </div>
 </header>
 
-<!-- OVERLAY -->
+<!-- Overlay mobile -->
 <div
   class="mobile-overlay"
   [class.open]="mobileOpen"
   (click)="closeMobileMenu()"
 ></div>
 
-<!-- MOBILE PANEL -->
+<!-- Panel mobile -->
 <nav #mobileMenu class="mobile-panel" [class.open]="mobileOpen">
-  <!-- NIVEL 1 (sin company): Usuarios + Companies -->
   <ng-container *ngIf="isLoggedIn && !hasCompany; else companyMenuMobile">
-    <a
+    <button
       *ngIf="auth.hasPermission('USERS:READ')"
+      type="button"
       class="mobile-link"
       routerLink="/users"
+      routerLinkActive="active"
       (click)="closeMobileMenu()"
     >
       Usuarios
-    </a>
-
-    <a
+    </button>
+    <button
       *ngIf="auth.hasPermission('COMPANIES:READ')"
+      type="button"
       class="mobile-link"
       routerLink="/companies"
+      routerLinkActive="active"
       (click)="closeMobileMenu()"
     >
-      Companies
-    </a>
+      Empresas
+    </button>
   </ng-container>
 
-  <!-- NIVEL 2 (con company): menú de empresa -->
   <ng-template #companyMenuMobile>
-    <a
+    <button
       *ngIf="auth.hasPermission('SUPPLIERS:READ')"
+      type="button"
       class="mobile-link"
       routerLink="/suppliers"
+      routerLinkActive="active"
       (click)="closeMobileMenu()"
     >
       Proveedores
-    </a>
-
-    <a
+    </button>
+    <button
       *ngIf="auth.hasPermission('CUSTOMERS:READ')"
+      type="button"
       class="mobile-link"
       routerLink="/customers"
+      routerLinkActive="active"
       (click)="closeMobileMenu()"
     >
       Clientes
-    </a>
-
-    <a
+    </button>
+    <button
       *ngIf="auth.hasPermission('STREAMING_ACCOUNTS:READ')"
+      type="button"
       class="mobile-link"
       routerLink="/accounts"
+      routerLinkActive="active"
       (click)="closeMobileMenu()"
     >
       Cuentas
-    </a>
-    <a
+    </button>
+    <button
       *ngIf="auth.hasPermission('STREAMING_SALES:READ')"
+      type="button"
       class="mobile-link"
       routerLink="/reportes"
+      routerLinkActive="active"
       (click)="closeMobileMenu()"
     >
       Reportes
-    </a>
-
-    <!-- Aquí luego agregas más módulos de empresa -->
+    </button>
   </ng-template>
 
-  <!-- SUBMENU MOBILE: Cuenta (Empresa + Acciones) -->
   <div *ngIf="isLoggedIn" class="mt-4 px-3">
     <div class="divider my-2"></div>
-
     <div class="text-xs uppercase opacity-60 mb-2">Cuenta</div>
-
-    <!-- Empresa actual -->
     <div class="mb-3">
       <div class="text-xs opacity-70">Empresa actual</div>
       <div class="font-semibold">
         {{ hasCompany ? activeCompanyName : "Sin empresa seleccionada" }}
       </div>
     </div>
-
-    <!-- Cambiar empresa -->
     <button
       *ngIf="hasCompany"
       type="button"
@@ -244,23 +260,21 @@
     >
       Cambiar empresa
     </button>
-
-    <!-- Cerrar sesión -->
     <button type="button" class="mobile-link mobile-logout" (click)="logout()">
       Cerrar sesión
     </button>
   </div>
 
-  <!-- Acceder -->
-  <a
+  <button
     *ngIf="!isLoggedIn"
+    type="button"
     class="mobile-link"
     routerLink="/login"
     (click)="closeMobileMenu()"
   >
     Acceder
-  </a>
+  </button>
 </nav>
 
-<!-- CONTENIDO -->
+<!-- Contenido -->
 <router-outlet></router-outlet>

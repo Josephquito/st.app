@@ -1,10 +1,18 @@
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  OnChanges,
+  Output,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   SupplierDTO,
   SuppliersService,
 } from '../../../services/suppliers.service';
+import { parseApiError } from '../../../utils/error.utils';
 
 @Component({
   selector: 'app-edit-supplier-modal',
@@ -12,7 +20,7 @@ import {
   imports: [CommonModule, FormsModule],
   templateUrl: './edit-supplier.modal.html',
 })
-export class EditSupplierModal {
+export class EditSupplierModal implements OnChanges {
   api = inject(SuppliersService);
 
   @Input() open = false;
@@ -23,14 +31,15 @@ export class EditSupplierModal {
 
   loading = false;
   errorMessage = '';
-
   name = '';
   contact = '';
+  notes = '';
 
   ngOnChanges() {
     if (this.open && this.supplier) {
       this.name = this.supplier.name ?? '';
       this.contact = this.supplier.contact ?? '';
+      this.notes = this.supplier.notes ?? '';
       this.errorMessage = '';
       this.loading = false;
     }
@@ -41,25 +50,28 @@ export class EditSupplierModal {
   }
 
   async submit() {
-    this.errorMessage = '';
     if (this.loading || !this.supplier) return;
 
-    if (this.name.trim().length < 2 || this.contact.trim().length < 2) {
+    const name = this.name.trim();
+    const contact = this.contact.trim();
+
+    if (name.length < 2 || contact.length < 2) {
       this.errorMessage =
         'Nombre y contacto deben tener al menos 2 caracteres.';
       return;
     }
 
     this.loading = true;
+    this.errorMessage = '';
     try {
       await this.api.update(this.supplier.id, {
-        name: this.name.trim(),
-        contact: this.contact.trim(),
+        name,
+        contact,
+        notes: this.notes.trim() || undefined,
       });
       this.updated.emit();
     } catch (e: any) {
-      this.errorMessage =
-        e?.error?.message ?? 'No se pudo actualizar el proveedor.';
+      this.errorMessage = parseApiError(e);
     } finally {
       this.loading = false;
     }

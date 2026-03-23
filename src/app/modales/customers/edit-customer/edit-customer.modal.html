@@ -21,7 +21,39 @@
         <div class="label">
           <span class="label-text">Origen (opcional)</span>
         </div>
-        <input class="input input-bordered w-full" [(ngModel)]="source" />
+        <select class="select select-bordered w-full" [(ngModel)]="source">
+          <option value="">— Sin origen —</option>
+          <option *ngFor="let opt of sourceOptions" [value]="opt.value">
+            {{ opt.label }}
+          </option>
+        </select>
+      </label>
+
+      <label *ngIf="needsSourceNote" class="form-control w-full">
+        <div class="label"><span class="label-text">¿Cuál origen?</span></div>
+        <input
+          class="input input-bordered w-full"
+          [(ngModel)]="sourceNote"
+          placeholder="Ej: TikTok, feria, etc."
+        />
+      </label>
+
+      <label class="form-control w-full">
+        <div class="label">
+          <span class="label-text">Notas internas (opcional)</span>
+        </div>
+        <textarea
+          class="textarea textarea-bordered w-full"
+          [(ngModel)]="notes"
+          rows="2"
+        ></textarea>
+      </label>
+
+      <label class="form-control w-full">
+        <div class="label">
+          <span class="label-text">Saldo (opcional)</span>
+        </div>
+        <input class="input input-bordered w-full" [(ngModel)]="balance" />
       </label>
     </div>
 
@@ -34,7 +66,6 @@
       >
         Cancelar
       </button>
-
       <button
         class="btn btn-neutral"
         type="button"

@@ -2,6 +2,7 @@ import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SuppliersService } from '../../../services/suppliers.service';
+import { parseApiError } from '../../../utils/error.utils';
 
 @Component({
   selector: 'app-create-supplier-modal',
@@ -18,42 +19,47 @@ export class CreateSupplierModal {
 
   loading = false;
   errorMessage = '';
-
   name = '';
   contact = '';
+  notes = '';
 
   onClose() {
     this.reset();
     this.close.emit();
   }
 
-  reset() {
+  private reset() {
     this.loading = false;
     this.errorMessage = '';
     this.name = '';
     this.contact = '';
+    this.notes = '';
   }
 
   async submit() {
-    this.errorMessage = '';
     if (this.loading) return;
 
-    if (this.name.trim().length < 2 || this.contact.trim().length < 2) {
+    const name = this.name.trim();
+    const contact = this.contact.trim();
+
+    if (name.length < 2 || contact.length < 2) {
       this.errorMessage =
         'Nombre y contacto deben tener al menos 2 caracteres.';
       return;
     }
 
     this.loading = true;
+    this.errorMessage = '';
     try {
       await this.api.create({
-        name: this.name.trim(),
-        contact: this.contact.trim(),
+        name,
+        contact,
+        notes: this.notes.trim() || undefined,
       });
       this.reset();
       this.created.emit();
     } catch (e: any) {
-      this.errorMessage = e?.error?.message ?? 'No se pudo crear el proveedor.';
+      this.errorMessage = parseApiError(e);
     } finally {
       this.loading = false;
     }

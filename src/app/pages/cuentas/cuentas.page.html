@@ -1,380 +1,136 @@
 <div class="page">
-  <!-- Error -->
   <div *ngIf="errorMessage" class="alert alert-error">
     <span>{{ errorMessage }}</span>
   </div>
 
-  <!-- Plataformas (tabs) -->
-  <div>
-    <h1 class="title">Plataformas</h1>
-  </div>
-  <div class="platform-bar">
-    <div class="tabs tabs-boxed platform-tabs platform-tabs--wrap">
-      <a
-        class="tab platform-tab"
-        [class.tab-active]="activePlatformId === null"
-        (click)="setPlatformFilter(null)"
-      >
-        Todas
-      </a>
+  <app-platforms-tabs
+    [platforms]="platforms"
+    [activePlatformId]="activePlatformId"
+    [canCreate]="canPlatformsCreate"
+    [canUpdate]="canPlatformsUpdate"
+    [canDelete]="canPlatformsDelete"
+    (filterChange)="onFilterChange($event)"
+    (createPlatform)="openCreatePlatform()"
+    (editPlatform)="onEditPlatform($event)"
+    (deletePlatform)="onDeletePlatform($event)"
+    (manageLabels)="onManageLabels($event)"
+  />
 
-      <ng-container *ngFor="let p of platforms">
-        <div class="platform-tab-item">
-          <a
-            class="tab platform-tab"
-            [class.tab-active]="activePlatformId === p.id"
-            (click)="setPlatformFilter(p.id)"
-          >
-            <span class="platform-tab-label">{{ p.name }}</span>
-          </a>
-
-          <button
-            *ngIf="canPlatformsUpdate || canPlatformsDelete"
-            class="btn btn-ghost btn-xs platform-menu-btn"
-            (click)="togglePlatformMenu(p, $event)"
-            title="Acciones plataforma"
-          >
-            ⋮
-          </button>
-        </div>
-      </ng-container>
-
-      <a
-        class="tab platform-tab platform-tab--create"
-        (click)="openCreatePlatform()"
-      >
-        + Plataforma
-      </a>
-    </div>
-  </div>
-
-  <!-- Header Cuentas -->
   <div class="header">
     <div>
       <h1 class="title">Cuentas</h1>
+      <p class="text-sm opacity-70">
+        Mostrando: <b>{{ activePlatformId ? '1 plataforma' : 'todas' }}</b> ·
+        Cuentas: <b>{{ filteredAccounts.length }}</b>
+      </p>
     </div>
-
-    <div class="flex gap-2">
-      <button
-        class="btn btn-neutral"
-        (click)="openCreateAccount()"
-        [disabled]="!canAccountsCreate"
-        title="Requiere STREAMING_ACCOUNTS:CREATE"
-      >
-        + Cuenta
-      </button>
-    </div>
-  </div>
-
-  <div class="text-sm opacity-70 platform-meta">
-    Mostrando: <b>{{ activePlatformId ? '1 plataforma' : 'todas' }}</b> ·
-    Cuentas: <b>{{ filteredAccounts.length }}</b>
-  </div>
-
-  <div *ngIf="!loading" class="flex flex-col sm:flex-row gap-3 mb-4">
-    <label class="input input-bordered flex items-center gap-2 w-full">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        class="h-4 w-4 opacity-60"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <circle cx="11" cy="11" r="8"></circle>
-        <path d="m21 21-4.3-4.3"></path>
-      </svg>
-
-      <input
-        type="text"
-        class="grow"
-        placeholder="Buscar por plataforma, email, proveedor"
-        [(ngModel)]="searchText"
-      />
-    </label>
-
     <button
-      type="button"
-      class="btn btn-ghost"
-      (click)="clearSearch()"
-      [disabled]="!searchText.trim()"
-      title="Limpiar búsqueda"
+      class="btn btn-neutral"
+      (click)="openCreateAccount()"
+      [disabled]="!canAccountsCreate"
     >
-      Limpiar
+      + Cuenta
     </button>
   </div>
 
-  <!-- Tabla cuentas -->
+  <app-accounts-table
+    [accounts]="filteredAccounts"
+    [loading]="loading"
+    [canUpdate]="canAccountsUpdate"
+    [canDelete]="canAccountsDelete"
+    [showLoadMore]="totalLoaded >= currentLimit"
+    [labels]="labels"
+    (viewAccount)="onViewAccount($event)"
+    (editAccount)="onEditAccount($event)"
+    (renewAccount)="onRenewAccount($event)"
+    (replaceAccount)="onReplaceAccount($event)"
+    (changePassword)="onChangePassword($event)"
+    (deleteAccount)="onDeleteAccount($event)"
+    (changeStatus)="onChangeStatus($event)"
+    (loadMore)="loadMore()"
+  />
 
-  <div class="card bg-base-100 shadow-sm">
-    <div class="card-body">
-      <!-- Loading -->
-      <div *ngIf="loading" class="flex items-center gap-2">
-        <span class="loading loading-spinner loading-md"></span>
-        <span>Cargando cuentas...</span>
-      </div>
-
-      <!-- Tabla -->
-
-      <div *ngIf="!loading" class="overflow-x-auto">
-        <table class="table">
-          <thead>
-            <tr>
-              <th class="no-wrap">Plataforma</th>
-              <th class="no-wrap">Email</th>
-              <th class="no-wrap">Clave</th>
-              <th class="no-wrap">Proveedor</th>
-              <th class="no-wrap">Fecha corte</th>
-
-              <!-- Alerta (orden) -->
-              <th
-                class="no-wrap cursor-pointer select-none"
-                (click)="setSort('ALERT')"
-                title="Ordenar por alerta"
-              >
-                <span class="inline-flex items-center gap-1">
-                  Alerta
-                  <span *ngIf="sortKey === 'ALERT'">
-                    {{ sortDir === 'asc' ? '▲' : '▼' }}
-                  </span>
-                </span>
-              </th>
-
-              <!-- Estado (orden) -->
-              <th
-                class="no-wrap cursor-pointer select-none"
-                (click)="setSort('STATUS')"
-                title="Ordenar por estado"
-              >
-                <span class="inline-flex items-center gap-1">
-                  Estado
-                  <span *ngIf="sortKey === 'STATUS'">
-                    {{ sortDir === 'asc' ? '▲' : '▼' }}
-                  </span>
-                </span>
-              </th>
-
-              <!-- Perfiles (orden) -->
-              <th
-                class="no-wrap cursor-pointer select-none"
-                (click)="setSort('PROFILES')"
-                title="Ordenar por perfiles (disponibles primero)"
-              >
-                <span class="inline-flex items-center gap-1">
-                  Perfiles
-                  <span *ngIf="sortKey === 'PROFILES'">
-                    {{ sortDir === 'asc' ? '▲' : '▼' }}
-                  </span>
-                </span>
-              </th>
-
-              <th class="no-wrap text-right">Acciones</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            <tr
-              *ngFor="let a of visibleAccounts"
-              class="row-click"
-              (click)="openAccount(a)"
-              title="Ver perfiles"
-            >
-              <!-- Plataforma -->
-              <td class="no-wrap">
-                <div class="font-medium">{{ a.platform?.name || '—' }}</div>
-              </td>
-
-              <!-- Email (tooltip) -->
-              <td class="no-wrap max-w-[220px]" [title]="a.email">
-                <div class="font-medium">{{ a.email }}</div>
-              </td>
-
-              <!-- Clave (tooltip) -->
-              <td
-                class="no-wrap font-mono max-w-[160px]"
-                [title]="a.password || '—'"
-              >
-                {{ a.password || '—' }}
-              </td>
-
-              <!-- Proveedor -->
-              <td class="no-wrap max-w-[180px]">
-                {{ a.supplier?.name || '—' }}
-              </td>
-
-              <!-- Fecha corte -->
-              <td class="no-wrap text-sm text-gray-500">
-                {{ a.cutoffDate ? (a.cutoffDate | date : 'mediumDate') : '—' }}
-              </td>
-
-              <!-- Alerta -->
-              <td class="no-wrap">
-                <ng-container
-                  *ngIf="daysRemaining(a.cutoffDate) as d; else noalert"
-                >
-                  <span class="badge" [ngClass]="alertBadgeClass(d)">
-                    {{ d < 0 ? ('Hace ' + (d * -1) + ' días') : d === 0 ? 'Vence
-                    hoy' : ('Queda ' + d + ' días') }}
-                  </span>
-                </ng-container>
-
-                <ng-template #noalert>
-                  <span class="badge badge-ghost">—</span>
-                </ng-template>
-              </td>
-
-              <!-- Estado -->
-              <td class="no-wrap">
-                <span
-                  class="badge"
-                  [class.badge-success]="a.status === 'ACTIVE'"
-                  [class.badge-ghost]="a.status !== 'ACTIVE'"
-                >
-                  {{ a.status }}
-                </span>
-              </td>
-
-              <!-- Perfiles -->
-              <td class="no-wrap">
-                <span class="badge badge-outline">
-                  {{ usedProfilesText(a) }}
-                </span>
-              </td>
-
-              <!-- Acciones -->
-              <td class="no-wrap text-right" (click)="$event.stopPropagation()">
-                <button
-                  type="button"
-                  class="btn btn-ghost btn-sm"
-                  (click)="toggleAccountMenu(a, $event)"
-                  [disabled]="loadingRowId === a.id"
-                  aria-label="Acciones"
-                  title="Acciones"
-                >
-                  ⋮
-                </button>
-              </td>
-            </tr>
-
-            <!-- Sin datos -->
-            <tr *ngIf="visibleAccounts.length === 0">
-              <td colspan="9" class="text-center text-gray-500 py-6">
-                No hay cuentas registradas.
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- ✅ MENÚ FLOTANTE: plataforma -->
-  <div
-    *ngIf="platMenuOpen && menuPlatform"
-    class="fixed z-[99999]"
-    [style.left.px]="platMenuX"
-    [style.top.px]="platMenuY"
-    style="transform: translateX(-100%)"
-    (click)="$event.stopPropagation()"
-  >
-    <div class="bg-base-100 shadow rounded-box w-48 border border-base-200">
-      <ul class="menu p-2">
-        <li *ngIf="canPlatformsUpdate">
-          <button type="button" (click)="openEditPlatform(menuPlatform!)">
-            Editar plataforma
-          </button>
-        </li>
-
-        <li *ngIf="canPlatformsDelete">
-          <button
-            type="button"
-            class="text-error"
-            (click)="confirmDeletePlatform(menuPlatform!)"
-          >
-            Eliminar plataforma
-          </button>
-        </li>
-      </ul>
-    </div>
-  </div>
-
-  <!-- ✅ MENÚ FLOTANTE: cuenta -->
-  <div
-    *ngIf="menuOpen && menuAccount"
-    class="fixed z-[99999]"
-    [style.left.px]="menuX"
-    [style.top.px]="menuY"
-    style="transform: translateX(-100%)"
-    (click)="$event.stopPropagation()"
-  >
-    <div class="bg-base-100 shadow rounded-box w-48 border border-base-200">
-      <ul class="menu p-2">
-        <li>
-          <button
-            type="button"
-            (click)="openAccount(menuAccount!); closeMenu()"
-          >
-            Ver perfiles
-          </button>
-        </li>
-
-        <li *ngIf="canAccountsUpdate">
-          <button
-            type="button"
-            (click)="openEditAccount(menuAccount!); closeMenu()"
-          >
-            Editar cuenta
-          </button>
-        </li>
-      </ul>
-    </div>
-  </div>
-
-  <!-- Modales: plataformas -->
+  <!-- Modales plataformas -->
   <app-create-platform-modal
     [open]="createPlatformOpen"
     (close)="closeAll()"
     (created)="onPlatformChanged()"
-  ></app-create-platform-modal>
-
+  />
   <app-edit-platform-modal
     [open]="editPlatformOpen"
     [platform]="selectedPlatform"
     (close)="closeAll()"
     (updated)="onPlatformChanged()"
-  ></app-edit-platform-modal>
-
+  />
   <app-delete-platform-modal
     [open]="deletePlatformOpen"
     [platform]="selectedPlatform"
     (close)="closeAll()"
     (deleted)="onPlatformChanged()"
-  ></app-delete-platform-modal>
+  />
 
-  <!-- Modales: cuentas -->
+  <!-- Modales cuentas -->
   <app-create-account-modal
     [open]="createAccountOpen"
     [platforms]="platforms"
     (close)="closeAll()"
     (created)="onAccountChanged()"
-  ></app-create-account-modal>
-
+  />
   <app-edit-account-modal
     [open]="editAccountOpen"
     [account]="selectedAccount"
     [platforms]="platforms"
     (close)="closeAll()"
     (updated)="onAccountChanged()"
-  ></app-edit-account-modal>
-
-  <app-view-account-modal
+  />
+  <app-account-drawer
     [open]="viewAccountOpen"
     [account]="selectedAccount"
     [canSell]="canSalesCreate"
     (close)="closeAll()"
     (changed)="onAccountChanged()"
     (saleCreated)="load()"
-  ></app-view-account-modal>
+    (changed)="onAccountChanged()"
+  />
+  <app-renew-account-modal
+    [open]="renewAccountOpen"
+    [account]="selectedAccount"
+    (close)="renewAccountOpen = false; selectedAccount = null"
+    (renewed)="onAccountRenewed()"
+  />
+  <app-replace-account-modal
+    [open]="replaceAccountOpen"
+    [account]="selectedAccount"
+    [accounts]="accounts"
+    (close)="replaceAccountOpen = false; selectedAccount = null"
+    (replaced)="onAccountReplaced()"
+  />
+  <app-change-password-modal
+    [open]="changePasswordOpen"
+    [account]="selectedAccount"
+    (close)="changePasswordOpen = false; selectedAccount = null"
+    (updated)="onPasswordChanged()"
+  />
+  <!-- Confirm eliminar cuenta -->
+  <app-confirm-action-modal
+    [open]="deleteAccountOpen"
+    title="¿Eliminar cuenta?"
+    [message]="'Estás a punto de eliminar <strong>' + accountToDelete?.email + '</strong>. Las ventas vencidas se cancelarán automáticamente. Esta acción no se puede deshacer.'"
+    confirmLabel="Sí, eliminar"
+    [danger]="true"
+    [loading]="loadingDelete"
+    (confirm)="confirmDeleteAccount()"
+    (cancel)="deleteAccountOpen = false; accountToDelete = null"
+  />
+  <app-change-status-modal
+    [open]="changeStatusOpen"
+    [account]="selectedAccount"
+    (close)="changeStatusOpen = false; selectedAccount = null"
+    (updated)="onStatusChanged()"
+  />
+  <app-manage-labels-modal
+    [open]="manageLabelsOpen"
+    [platform]="selectedPlatform"
+    (close)="manageLabelsOpen = false; selectedPlatform = null"
+  />
 </div>

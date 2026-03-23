@@ -1,21 +1,19 @@
 <div class="page">
+  <!-- Header -->
   <div class="header">
     <div>
       <h1 class="title">Proveedores</h1>
       <p class="subtitle">Crear, editar y administrar proveedores.</p>
     </div>
-
     <button
       class="btn btn-neutral"
       (click)="openCreate()"
       [disabled]="!canCreate"
-      title="Requiere SUPPLIERS:CREATE"
     >
       Crear proveedor
     </button>
   </div>
 
-  <!-- Error -->
   <div *ngIf="errorMessage" class="alert alert-error">
     <span>{{ errorMessage }}</span>
   </div>
@@ -30,36 +28,39 @@
 
       <!-- Tabla -->
       <div *ngIf="!loading" class="overflow-x-auto">
-        <table class="table table">
+        <table class="table">
           <thead>
             <tr>
               <th>Nombre</th>
               <th>Contacto</th>
-              <th>Creado</th>
+              <th>Saldo</th>
               <th class="text-right">Acciones</th>
             </tr>
           </thead>
 
           <tbody>
-            <tr *ngFor="let s of suppliers">
-              <td>
-                <div class="font-medium">{{ s.name }}</div>
-              </td>
-
+            <tr
+              *ngFor="let s of suppliers"
+              class="cursor-pointer"
+              [ngClass]="{ 'bg-base-200': drawerSupplier?.id === s.id }"
+              (click)="openDrawer(s)"
+            >
+              <td><div class="font-medium">{{ s.name }}</div></td>
               <td>{{ s.contact || '—' }}</td>
-
-              <td class="text-sm text-gray-500">
-                {{ s.createdAt ? (s.createdAt | date : 'medium') : '—' }}
+              <td>
+                <span
+                  class="font-semibold tabular-nums"
+                  [class.text-success]="(+s.balance) > 0"
+                  [class.text-error]="(+s.balance) < 0"
+                  >$ {{ s.balance }}</span
+                >
               </td>
-
-              <td class="text-right">
+              <td class="text-right" (click)="$event.stopPropagation()">
                 <button
                   type="button"
                   class="btn btn-ghost btn-sm"
                   (click)="toggleMenu(s, $event)"
-                  [disabled]="loadingRowId === s.id"
                   aria-label="Acciones"
-                  title="Acciones"
                 >
                   ⋮
                 </button>
@@ -67,7 +68,7 @@
             </tr>
 
             <tr *ngIf="suppliers.length === 0">
-              <td colspan="4" class="text-center text-gray-500 py-6">
+              <td colspan="5" class="text-center text-base-content/50 py-6">
                 No hay proveedores registrados.
               </td>
             </tr>
@@ -77,7 +78,7 @@
     </div>
   </div>
 
-  <!-- ✅ MENÚ FLOTANTE FIXED (NO LO RECORTA NADIE) -->
+  <!-- Menú flotante -->
   <div
     *ngIf="menuOpen && menuSupplier"
     class="fixed z-[99999]"
@@ -86,19 +87,37 @@
     style="transform: translateX(-100%)"
     (click)="$event.stopPropagation()"
   >
-    <div class="bg-base-100 shadow rounded-box w-44 border border-base-200">
-      <ul class="menu p-2">
+    <div
+      class="bg-base-100 shadow-lg rounded-xl border border-base-200 w-48 py-1 overflow-hidden"
+    >
+      <ul class="px-1">
         <li *ngIf="canUpdate">
-          <button type="button" (click)="openEdit(menuSupplier); closeMenu()">
+          <button
+            type="button"
+            class="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-base-200 transition-colors"
+            (click)="openEdit(menuSupplier!); closeMenu()"
+          >
             Editar
           </button>
         </li>
-
+        <li *ngIf="canUpdate">
+          <button
+            type="button"
+            class="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-base-200 transition-colors"
+            (click)="openBalance(menuSupplier!); closeMenu()"
+          >
+            Ajustar saldo
+          </button>
+        </li>
+        <div
+          *ngIf="canDelete && canUpdate"
+          class="my-1 mx-2 h-px bg-base-200"
+        ></div>
         <li *ngIf="canDelete">
           <button
             type="button"
-            class="text-error"
-            (click)="confirmDelete(menuSupplier); closeMenu()"
+            class="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-error/10 text-error transition-colors"
+            (click)="confirmDelete(menuSupplier!); closeMenu()"
           >
             Eliminar
           </button>
@@ -107,24 +126,43 @@
     </div>
   </div>
 
+  <!-- Drawer -->
+  <app-supplier-drawer
+    [open]="!!drawerSupplier"
+    [supplier]="drawerSupplier"
+    (close)="closeDrawer()"
+    (edit)="openEdit($event)"
+    (adjustBalance)="openBalance($event)"
+    (delete)="confirmDelete($event)"
+    (notesUpdated)="onNotesUpdated($event.notes, $event.supplierId)"
+  />
+
   <!-- Modales -->
   <app-create-supplier-modal
     [open]="createOpen"
     (close)="closeAll()"
     (created)="onCreated()"
-  ></app-create-supplier-modal>
-
+  />
   <app-edit-supplier-modal
     [open]="editOpen"
     [supplier]="selected"
     (close)="closeAll()"
     (updated)="onUpdated()"
-  ></app-edit-supplier-modal>
-
-  <app-delete-supplier-modal
+  />
+  <app-confirm-action-modal
     [open]="deleteOpen"
+    title="¿Eliminar proveedor?"
+    [message]="'¿Seguro que quieres eliminar a <b>' + selected?.name + '</b>?'"
+    confirmLabel="Eliminar"
+    [danger]="true"
+    [loading]="loadingDelete"
+    (confirm)="onDeleteConfirm()"
+    (cancel)="closeAll()"
+  />
+  <app-adjust-balance-modal
+    [open]="balanceOpen"
     [supplier]="selected"
     (close)="closeAll()"
-    (deleted)="onDeleted()"
-  ></app-delete-supplier-modal>
+    (updated)="onBalanceUpdated()"
+  />
 </div>

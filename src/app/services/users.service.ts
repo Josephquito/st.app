@@ -2,8 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
-
-export type AppRole = 'SUPERADMIN' | 'ADMIN' | 'EMPLOYEE';
+import { AppRole } from './auth.service';
 
 export type UserDTO = {
   id: number;
@@ -11,7 +10,7 @@ export type UserDTO = {
   nombre: string;
   phone: string;
   role: AppRole; // ← lo que DEVUELVE el backend
-  status: 'ACTIVE' | 'INACTIVE' | 'BLOCKED';
+  status: 'ACTIVE' | 'INACTIVE';
   createdAt: string;
   updatedAt: string;
 };
@@ -57,6 +56,10 @@ export class UsersService {
 
   // ===== DELETE /users/:id =====
   remove(id: number) {
-    return firstValueFrom(this.http.delete(`${this.base}/${id}`));
+    return firstValueFrom(
+      this.http.delete<{ ok: boolean; deletedUserId: number }>(
+        `${this.base}/${id}`,
+      ),
+    );
   }
 }

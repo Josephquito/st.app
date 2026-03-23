@@ -7,10 +7,10 @@
     </div>
 
     <div class="mt-4 grid gap-3">
-      <label class="form-control">
+      <label class="form-control w-full">
         <div class="label"><span class="label-text">Nombre</span></div>
         <input
-          class="input input-bordered"
+          class="input input-bordered w-full"
           [(ngModel)]="name"
           placeholder="Netflix, Disney+, etc."
         />
@@ -18,10 +18,20 @@
     </div>
 
     <div class="modal-action">
-      <button class="btn" (click)="onClose()" [disabled]="loading">
+      <button
+        class="btn"
+        type="button"
+        (click)="onClose()"
+        [disabled]="loading"
+      >
         Cancelar
       </button>
-      <button class="btn btn-primary" (click)="submit()" [disabled]="loading">
+      <button
+        class="btn btn-neutral"
+        type="button"
+        (click)="submit()"
+        [disabled]="loading"
+      >
         <span *ngIf="loading" class="loading loading-spinner loading-sm"></span>
         Crear
       </button>
@@ -29,6 +39,6 @@
   </div>
 
   <form method="dialog" class="modal-backdrop">
-    <button (click)="onClose()">close</button>
+    <button type="button" (click)="onClose()">close</button>
   </form>
 </dialog>

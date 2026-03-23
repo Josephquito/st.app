@@ -1,14 +1,14 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 
-// Ajustamos a 'CANCELED' con una sola L para que coincida con tu base de datos
-export type SaleStatus = 'ACTIVE' | 'CANCELED';
+export type SaleStatus = 'ACTIVE' | 'EXPIRED' | 'PAUSED' | 'CLOSED';
+export type RenewalMessageStatus = 'NOT_APPLICABLE' | 'PENDING' | 'SENT';
 
 export type StreamingSaleDTO = {
   id: number;
-  companyId: number;
+  companyId?: number;
   platformId: number;
   accountId: number;
   profileId: number;
@@ -18,20 +18,21 @@ export type StreamingSaleDTO = {
   saleDate: string;
   daysAssigned: number;
   cutoffDate: string;
-
   costAtSale: string;
+  dailyCost: string;
   notes: string | null;
   status: SaleStatus;
+  renewalStatus: RenewalMessageStatus;
+
+  pausedAt?: string | null;
+  pausedDaysLeft?: number | null;
+  creditAmount?: string | null;
+  creditRefunded: boolean;
 
   createdAt?: string;
   updatedAt?: string;
 
-  customer?: {
-    id: number;
-    name: string;
-    contact: string;
-    source?: string | null;
-  };
+  customer?: { id: number; name: string; contact: string };
   platform?: { id: number; name: string };
   account?: { id: number; email: string };
   profile?: { id: number; profileNo: number; status: string };
@@ -42,20 +43,36 @@ export type CreateStreamingSaleDto = {
   profileId: number;
   customerId: number;
   salePrice: string;
-  saleDate: string; // ISO
+  saleDate: string;
   daysAssigned: number;
   notes?: string;
 };
 
-// Actualizado para permitir edición completa según el nuevo backend
 export type UpdateStreamingSaleDto = {
   customerId?: number;
-  profileId?: number;
   salePrice?: string;
   saleDate?: string;
   daysAssigned?: number;
+  notes?: string | null; // ← agrega | null
+};
+
+export type RenewStreamingSaleDto = {
+  saleDate: string;
+  daysAssigned: number;
+  salePrice: string;
+  customerId?: number;
   notes?: string;
+};
+
+export type TransferProfileDto = {
+  targetAccountId: number;
+  targetProfileId: number;
+};
+
+export type SalesQueryDto = {
   status?: SaleStatus;
+  renewalStatus?: RenewalMessageStatus;
+  accountId?: number;
 };
 
 @Injectable({ providedIn: 'root' })
@@ -63,8 +80,15 @@ export class StreamingSalesService {
   private http = inject(HttpClient);
   private base = `${environment.apiUrl}/streaming-sales`;
 
-  findAll(): Promise<StreamingSaleDTO[]> {
-    return firstValueFrom(this.http.get<StreamingSaleDTO[]>(this.base));
+  findAll(query?: SalesQueryDto): Promise<StreamingSaleDTO[]> {
+    let params = new HttpParams();
+    if (query?.status) params = params.set('status', query.status);
+    if (query?.renewalStatus)
+      params = params.set('renewalStatus', query.renewalStatus);
+    if (query?.accountId) params = params.set('accountId', query.accountId);
+    return firstValueFrom(
+      this.http.get<StreamingSaleDTO[]>(this.base, { params }),
+    );
   }
 
   findOne(id: number): Promise<StreamingSaleDTO> {
@@ -83,12 +107,57 @@ export class StreamingSalesService {
     );
   }
 
-  /**
-   * Finaliza la venta y devuelve el perfil al stock (Kardex IN)
-   */
+  // Vacía el perfil → vuelve a AVAILABLE, venta → CLOSED
   empty(id: number): Promise<StreamingSaleDTO> {
     return firstValueFrom(
       this.http.post<StreamingSaleDTO>(`${this.base}/${id}/empty`, {}),
+    );
+  }
+
+  // Renueva la venta → nueva venta en mismo perfil, perfil sigue SOLD
+  renew(id: number, dto: RenewStreamingSaleDto): Promise<StreamingSaleDTO> {
+    return firstValueFrom(
+      this.http.post<StreamingSaleDTO>(`${this.base}/${id}/renew`, dto),
+    );
+  }
+
+  // Pausa la venta → congela días restantes y calcula saldo
+  pause(id: number): Promise<StreamingSaleDTO> {
+    return firstValueFrom(
+      this.http.post<StreamingSaleDTO>(`${this.base}/${id}/pause`, {}),
+    );
+  }
+
+  // Reanuda la venta pausada → recalcula cutoffDate desde hoy
+  resume(id: number): Promise<StreamingSaleDTO> {
+    return firstValueFrom(
+      this.http.post<StreamingSaleDTO>(`${this.base}/${id}/resume`, {}),
+    );
+  }
+
+  // Transfiere cliente a otro perfil/cuenta de la misma plataforma
+  transfer(id: number, dto: TransferProfileDto): Promise<StreamingSaleDTO> {
+    return firstValueFrom(
+      this.http.post<StreamingSaleDTO>(`${this.base}/${id}/transfer`, dto),
+    );
+  }
+
+  // Reembolsa saldo al cliente y cierra el perfil
+  refund(id: number): Promise<StreamingSaleDTO> {
+    return firstValueFrom(
+      this.http.post<StreamingSaleDTO>(`${this.base}/${id}/refund`, {}),
+    );
+  }
+
+  // Actualiza el estado del mensaje de renovación manualmente
+  updateRenewalStatus(
+    id: number,
+    renewalStatus: RenewalMessageStatus,
+  ): Promise<StreamingSaleDTO> {
+    return firstValueFrom(
+      this.http.patch<StreamingSaleDTO>(`${this.base}/${id}/renewal-status`, {
+        renewalStatus,
+      }),
     );
   }
 }

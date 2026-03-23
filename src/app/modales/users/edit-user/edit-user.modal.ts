@@ -9,8 +9,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UsersService, UserDTO } from '../../../services/users.service';
-
-type UserStatus = 'ACTIVE' | 'INACTIVE' | 'BLOCKED';
+import { parseApiError } from '../../../utils/error.utils';
 
 @Component({
   selector: 'app-edit-user-modal',
@@ -28,16 +27,14 @@ export class EditUserModal implements OnChanges {
   @Output() close = new EventEmitter<void>();
   @Output() updated = new EventEmitter<void>();
 
-  // campos del formulario (UI)
   nombre = '';
   phone = '';
   password = '';
-  status: UserStatus = 'ACTIVE';
+  status: UserDTO['status'] = 'ACTIVE'; // ← tipo directo del DTO
 
-  // snapshot original para detectar cambios
   private originalNombre = '';
   private originalPhone = '';
-  private originalStatus: UserStatus = 'ACTIVE';
+  private originalStatus: UserDTO['status'] = 'ACTIVE';
 
   loading = false;
   error = '';
@@ -47,11 +44,10 @@ export class EditUserModal implements OnChanges {
 
     this.nombre = this.user.nombre ?? '';
     this.phone = this.user.phone ?? '';
-    this.status = (this.user.status as UserStatus) ?? 'ACTIVE';
+    this.status = this.user.status ?? 'ACTIVE';
     this.password = '';
     this.error = '';
 
-    // ✅ guarda originales (para PATCH)
     this.originalNombre = this.nombre.trim();
     this.originalPhone = this.phone.trim();
     this.originalStatus = this.status;
@@ -68,8 +64,6 @@ export class EditUserModal implements OnChanges {
     const nombre = this.nombre.trim();
     const phone = this.phone.trim();
 
-    // Si tu negocio exige nombre/phone siempre (aunque PATCH), valida aquí.
-    // Si NO es obligatorio siempre, quita este bloque.
     if (!nombre || !phone) {
       this.error = 'Nombre y teléfono son obligatorios';
       return;
@@ -79,21 +73,14 @@ export class EditUserModal implements OnChanges {
     this.error = '';
 
     try {
-      // ✅ PATCH: manda solo campos que cambiaron y que existen en UpdateUserDto
       const payload: any = {};
 
       if (nombre !== this.originalNombre) payload.nombre = nombre;
       if (phone !== this.originalPhone) payload.phone = phone;
-
-      // ⚠️ clave: SOLO enviar status si cambió (si no, te bloquea al editarte)
       if (this.status !== this.originalStatus) payload.status = this.status;
-
-      // password opcional
-      if (this.password && this.password.length >= 6) {
+      if (this.password && this.password.length >= 6)
         payload.password = this.password;
-      }
 
-      // si no hay cambios reales, no pegues al backend
       if (Object.keys(payload).length === 0) {
         this.updated.emit();
         return;
@@ -102,10 +89,7 @@ export class EditUserModal implements OnChanges {
       await this.api.update(this.user.id, payload);
       this.updated.emit();
     } catch (e: any) {
-      const msg = e?.error?.message;
-      this.error = Array.isArray(msg)
-        ? msg.join(', ')
-        : msg || 'Error actualizando usuario';
+      this.error = parseApiError(e);
     } finally {
       this.loading = false;
     }

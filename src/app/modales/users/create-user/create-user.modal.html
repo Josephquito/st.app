@@ -1,6 +1,8 @@
 <dialog class="modal" [class.modal-open]="open">
   <div class="modal-box">
-    <h3 class="font-bold text-lg">Crear nuevo {{ baseRole }}</h3>
+    <h3 class="font-bold text-lg">
+      Crear un {{ baseRole === 'ADMIN' ? 'Admin' : 'Empleado' }}
+    </h3>
 
     <div *ngIf="error" class="alert alert-error mt-3">
       <span>{{ error }}</span>
@@ -10,25 +12,27 @@
       <input
         class="input input-bordered w-full"
         placeholder="Email"
+        type="email"
         [(ngModel)]="email"
         [disabled]="loading"
       />
       <input
         class="input input-bordered w-full"
-        placeholder="Clave"
+        placeholder="Contraseña"
         type="password"
         [(ngModel)]="password"
         [disabled]="loading"
       />
       <input
         class="input input-bordered w-full"
-        placeholder="Nombre"
+        placeholder="Nombre completo"
         [(ngModel)]="nombre"
         [disabled]="loading"
       />
       <input
         class="input input-bordered w-full"
         placeholder="Teléfono"
+        type="tel"
         [(ngModel)]="phone"
         [disabled]="loading"
       />

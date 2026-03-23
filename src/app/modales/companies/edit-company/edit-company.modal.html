@@ -1,28 +1,31 @@
 <dialog class="modal" [class.modal-open]="open">
   <div class="modal-box">
-    <h3 class="font-bold text-lg">Editar company</h3>
+    <h3 class="font-bold text-lg">Editar empresa</h3>
 
-    <div *ngIf="errorMessage" class="alert alert-error mt-3">
+    <div *ngIf="errorMessage" class="alert alert-error mt-3 text-sm py-2.5">
       <span>{{ errorMessage }}</span>
     </div>
 
     <div class="mt-4 grid gap-3">
       <label class="form-control w-full">
         <div class="label"><span class="label-text">Nombre</span></div>
-        <input class="input input-bordered w-full" [(ngModel)]="name" />
+        <input
+          class="input input-bordered w-full"
+          placeholder="Nombre de la empresa"
+          [(ngModel)]="name"
+          [disabled]="loading"
+        />
       </label>
 
       <label class="form-control w-full">
         <div class="label"><span class="label-text">Teléfono</span></div>
-        <input class="input input-bordered w-full" [(ngModel)]="phone" />
-      </label>
-
-      <label class="form-control w-full">
-        <div class="label"><span class="label-text">Status</span></div>
-        <select class="select select-bordered w-full" [(ngModel)]="status">
-          <option [ngValue]="'ACTIVE'">ACTIVE</option>
-          <option [ngValue]="'INACTIVE'">INACTIVE</option>
-        </select>
+        <input
+          class="input input-bordered w-full"
+          placeholder="Ej. +593 99 123 4567"
+          type="tel"
+          [(ngModel)]="phone"
+          [disabled]="loading"
+        />
       </label>
     </div>
 
@@ -35,7 +38,6 @@
       >
         Cancelar
       </button>
-
       <button
         class="btn btn-neutral"
         type="button"
@@ -43,7 +45,7 @@
         [disabled]="loading"
       >
         <span *ngIf="loading" class="loading loading-spinner loading-sm"></span>
-        Guardar
+        {{ loading ? 'Guardando...' : 'Guardar cambios' }}
       </button>
     </div>
   </div>

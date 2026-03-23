@@ -16,10 +16,8 @@ import {
   CustomersService,
   CustomerDTO,
 } from '../../../services/customers.service';
-import {
-  StreamingAccountDTO,
-  AccountProfileDTO,
-} from '../../../services/streaming-accounts.service';
+import { StreamingAccountDTO } from '../../../services/streaming-accounts.service';
+import { parseApiError } from '../../../utils/error.utils';
 
 type PeriodMonths = 1 | 3 | 6 | 12 | null;
 
@@ -43,75 +41,129 @@ export class EditSaleModal implements OnChanges {
   loading = false;
   errorMessage = '';
 
-  // Clientes
   customers: CustomerDTO[] = [];
   customersLoading = false;
   customerId: number | null = null;
   customerQuery = '';
   customerDropdownOpen = false;
   customerMatches: CustomerDTO[] = [];
-  creatingCustomer = false;
 
-  // Venta
   salePrice = '';
   saleDate = '';
   periodMonths: PeriodMonths = null;
   periodDays: number | null = 30;
   daysAssigned = 30;
   cutoffDate = '';
-  notes = '';
 
+  // =========================
+  // Lifecycle
+  // =========================
   async ngOnChanges() {
     if (this.open && this.sale) {
       this.errorMessage = '';
-      await this.loadCustomers();
       this.fillForm();
     }
   }
 
   fillForm() {
     if (!this.sale) return;
-    this.customerId = this.sale.customerId;
-    this.customerQuery = this.getCustomerLabelById(this.sale.customerId);
-    this.salePrice = this.sale.salePrice.replace('.', ','); // Mostramos con coma por defecto si prefieres
 
-    if (this.sale.saleDate) {
-      this.saleDate = this.sale.saleDate.split('T')[0];
+    const customerId = this.sale.customerId ?? (this.sale.customer as any)?.id;
+    const customerName = (this.sale.customer as any)?.name ?? '';
+    const customerContact = (this.sale.customer as any)?.contact ?? '';
+
+    if (customerId) {
+      const customer: CustomerDTO = {
+        id: customerId,
+        name: customerName,
+        contact: customerContact,
+        source: null,
+      };
+      this.customers = [customer];
+      this.customerId = customerId;
+      this.customerQuery = [customerName, customerContact]
+        .filter(Boolean)
+        .join(' · ');
     }
 
+    this.salePrice = this.sale.salePrice;
+    this.saleDate = this.sale.saleDate ? this.sale.saleDate.split('T')[0] : '';
     this.periodDays = this.sale.daysAssigned;
-    this.notes = this.sale.notes || '';
+    this.periodMonths = null;
     this.recalcCutoffDate();
   }
 
-  // --- Lógica de Clientes ---
-  async loadCustomers() {
-    this.customersLoading = true;
-    try {
-      this.customers = await this.customersApi.findAll();
-    } catch {
-      this.customers = [];
-    } finally {
-      this.customersLoading = false;
-    }
-  }
-
+  // =========================
+  // Customers
+  // =========================
   onCustomerQueryChange() {
     this.customerDropdownOpen = true;
-    const q = this.customerQuery.trim().toLowerCase();
-    this.customerMatches = this.customers
-      .filter((c) => `${c.name} ${c.contact || ''}`.toLowerCase().includes(q))
-      .slice(0, 8);
+    const q = this.customerQuery.trim();
+    if (this.customerId) {
+      const current = this.customers.find((x) => x.id === this.customerId);
+      const label = current ? this.getCustomerLabel(current).toLowerCase() : '';
+      if (q && !label.toLowerCase().includes(q.toLowerCase()))
+        this.customerId = null;
+    }
+    this.searchCustomers(q);
+  }
+
+  private searchDebounce: any = null;
+
+  searchCustomers(q: string) {
+    clearTimeout(this.searchDebounce);
+    if (q.length < 1) {
+      this.customerMatches = [];
+      return;
+    }
+    this.searchDebounce = setTimeout(async () => {
+      this.customersLoading = true;
+      try {
+        const res = await this.customersApi.findAll({ limit: 10, search: q });
+        this.customerMatches = res.data;
+        for (const c of res.data) {
+          if (!this.customers.find((x) => x.id === c.id))
+            this.customers.push(c);
+        }
+      } catch {
+        this.customerMatches = [];
+      } finally {
+        this.customersLoading = false;
+      }
+    }, 250);
   }
 
   selectCustomer(c: CustomerDTO) {
     this.customerId = c.id;
     this.customerQuery = this.getCustomerLabel(c);
     this.customerDropdownOpen = false;
+    this.customerMatches = [];
   }
 
-  getCustomerLabel(c: any): string {
-    return [c.name, c.contact, c.source].filter(Boolean).join(' · ');
+  onCustomerBlur() {
+    setTimeout(() => {
+      this.customerDropdownOpen = false;
+    }, 120);
+  }
+
+  onCustomerEnter(event: Event) {
+    (event as KeyboardEvent).preventDefault();
+    if (this.customersLoading) return;
+    if (this.customerId) {
+      this.customerDropdownOpen = false;
+      return;
+    }
+    if (this.customerMatches.length > 0)
+      this.selectCustomer(this.customerMatches[0]);
+  }
+
+  trackCustomer = (_: number, c: CustomerDTO) => c.id;
+
+  getCustomerLabel(c: CustomerDTO): string {
+    const name = (c.name ?? '').trim();
+    const contact = (c.contact ?? '').trim();
+    const parts = [name, contact].filter(Boolean);
+    return parts.length === 0 ? `#${c.id}` : parts.join(' · ');
   }
 
   getCustomerLabelById(id: number): string {
@@ -119,69 +171,114 @@ export class EditSaleModal implements OnChanges {
     return c ? this.getCustomerLabel(c) : '';
   }
 
-  // --- Lógica de Fechas y Periodos (Igual a Create) ---
+  // =========================
+  // Fechas y período
+  // =========================
+  private parseISODate(dateStr: string): Date | null {
+    if (!dateStr) return null;
+    const [y, m, d] = dateStr.split('-').map(Number);
+    if (!y || !m || !d) return null;
+    return new Date(Date.UTC(y, m - 1, d)); // ← UTC
+  }
+
+  private toISODate(d: Date): string {
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+  }
+
+  recalcCutoffDate() {
+    const base = this.parseISODate(this.saleDate);
+    if (!base) {
+      this.cutoffDate = '';
+      this.daysAssigned = 0;
+      return;
+    }
+
+    const days = this.periodDays === null ? null : Number(this.periodDays);
+    if (Number.isFinite(days as number) && (days as number) >= 1) {
+      this.daysAssigned = days as number;
+      const end = new Date(base);
+      end.setDate(end.getDate() + this.daysAssigned);
+      this.cutoffDate = this.toISODate(end);
+      return;
+    }
+
+    if (this.periodMonths !== null) {
+      const end = new Date(base);
+      end.setMonth(end.getMonth() + this.periodMonths);
+      this.cutoffDate = this.toISODate(end);
+      this.daysAssigned = Math.max(
+        1,
+        Math.ceil((end.getTime() - base.getTime()) / (1000 * 60 * 60 * 24)),
+      );
+      return;
+    }
+
+    this.cutoffDate = '';
+    this.daysAssigned = 0;
+  }
+
   onSaleDateChange() {
     this.recalcCutoffDate();
   }
 
   onPeriodMonthsChange(value: any) {
     const v = value === null ? null : Number(value);
-    this.periodMonths = v as PeriodMonths;
+    this.periodMonths =
+      v === 1 || v === 3 || v === 6 || v === 12 ? (v as 1 | 3 | 6 | 12) : null;
     if (this.periodMonths !== null) this.periodDays = null;
     this.recalcCutoffDate();
   }
 
   onPeriodDaysChange(value: any) {
     const raw = value === '' || value === null ? null : Number(value);
-    this.periodDays = raw;
+    if (!Number.isFinite(raw as number) || (raw as number) < 1) {
+      this.periodDays = null;
+      this.recalcCutoffDate();
+      return;
+    }
+    this.periodDays = raw as number;
     this.periodMonths = null;
     this.recalcCutoffDate();
   }
 
-  recalcCutoffDate() {
-    if (!this.saleDate) return;
-    const base = new Date(this.saleDate + 'T00:00:00');
-
-    if (this.periodDays && this.periodDays >= 1) {
-      this.daysAssigned = this.periodDays;
-    } else if (this.periodMonths) {
-      const end = new Date(base);
-      end.setMonth(end.getMonth() + this.periodMonths);
-      const diff = end.getTime() - base.getTime();
-      this.daysAssigned = Math.ceil(diff / (1000 * 60 * 60 * 24));
-    }
-
-    const res = new Date(base);
-    res.setDate(base.getDate() + this.daysAssigned);
-    this.cutoffDate = res.toISOString().split('T')[0];
-  }
-
-  // --- Normalización de Decimales (Clave para aceptar comas) ---
   private normalizeDecimal(value: string): string {
     if (!value) return '';
-    let sanitized = value.replace(/[^0-9.,]/g, '');
-    if (sanitized.includes(',') && sanitized.includes('.')) {
-      sanitized = sanitized.replace(/\./g, '').replace(',', '.');
-    } else if (sanitized.includes(',')) {
-      sanitized = sanitized.replace(',', '.');
-    }
-    return sanitized;
+    let s = value.replace(/[^0-9.,]/g, '');
+    if (s.includes(',') && s.includes('.'))
+      s = s.replace(/\./g, '').replace(',', '.');
+    if (s.includes(',') && !s.includes('.')) s = s.replace(',', '.');
+    const parts = s.split('.');
+    if (parts.length > 2) s = parts.shift()! + '.' + parts.join('');
+    return s;
   }
 
+  // =========================
+  // Modal
+  // =========================
   onClose() {
+    this.customerMatches = [];
+    this.customerDropdownOpen = false;
     this.close.emit();
   }
 
   async submit() {
     this.errorMessage = '';
     if (!this.customerId) {
-      this.errorMessage = 'Seleccione un cliente';
+      this.errorMessage = 'Selecciona un cliente.';
       return;
     }
 
     const cleanPrice = this.normalizeDecimal(this.salePrice);
     if (!cleanPrice) {
-      this.errorMessage = 'Precio inválido';
+      this.errorMessage = 'Precio de venta requerido.';
+      return;
+    }
+    if (!this.saleDate) {
+      this.errorMessage = 'Fecha de venta requerida.';
+      return;
+    }
+    if (!Number.isInteger(this.daysAssigned) || this.daysAssigned <= 0) {
+      this.errorMessage = 'Días asignados inválidos.';
       return;
     }
 
@@ -190,14 +287,13 @@ export class EditSaleModal implements OnChanges {
       await this.api.update(this.sale!.id, {
         customerId: this.customerId,
         salePrice: cleanPrice,
-        saleDate: new Date(this.saleDate).toISOString(),
+        saleDate: this.saleDate,
         daysAssigned: this.daysAssigned,
-        notes: this.notes.trim() || undefined,
       });
       this.updated.emit();
       this.onClose();
     } catch (e: any) {
-      this.errorMessage = e?.error?.message || 'Error al actualizar';
+      this.errorMessage = parseApiError(e);
     } finally {
       this.loading = false;
     }

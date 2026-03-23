@@ -1,7 +1,11 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export type AppRole = 'SUPERADMIN' | 'ADMIN' | 'EMPLOYEE';
+
 type JwtPayload = { exp?: number; [k: string]: any };
 
 export type Me = {
@@ -12,9 +16,13 @@ export type Me = {
   nombre?: string;
 };
 
+type LoginResponse = { access_token: string };
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private router = inject(Router);
+  private http = inject(HttpClient);
+  private base = environment.apiUrl;
 
   private tokenKey = 'access_token';
   private meKey = 'me';
@@ -22,16 +30,12 @@ export class AuthService {
   private logoutInProgress = false;
   private logoutTimer: ReturnType<typeof setTimeout> | null = null;
 
-  // ✅ signal para que el UI se actualice instantáneo
   private meSig = signal<Me | null>(null);
 
   private isBrowser(): boolean {
     return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
   }
 
-  // ======================
-  // Init (cargar me desde storage al arrancar)
-  // ======================
   constructor() {
     if (!this.isBrowser()) return;
 
@@ -44,9 +48,24 @@ export class AuthService {
       }
     }
 
-    // si ya hay token al cargar, programa autologout
     const t = this.getToken();
     if (t) this.scheduleAutoLogout(t);
+  }
+
+  // ======================
+  // API calls
+  // ======================
+  login(email: string, password: string) {
+    return firstValueFrom(
+      this.http.post<LoginResponse>(`${this.base}/auth/login`, {
+        email,
+        password,
+      }),
+    );
+  }
+
+  fetchMe() {
+    return firstValueFrom(this.http.get<Me>(`${this.base}/users/me`));
   }
 
   // ======================
@@ -67,14 +86,11 @@ export class AuthService {
   // ======================
   setMe(me: Me | null): void {
     this.meSig.set(me);
-
     if (!this.isBrowser()) return;
-
     if (!me) {
       localStorage.removeItem(this.meKey);
       return;
     }
-
     localStorage.setItem(this.meKey, JSON.stringify(me));
   }
 
@@ -83,15 +99,16 @@ export class AuthService {
   }
 
   // ======================
-  // API (signals/computed)
+  // Signals / computed
   // ======================
   me = computed(() => this.meSig());
   permissions = computed(() => this.meSig()?.permissions ?? []);
   role = computed<AppRole | null>(() => this.meSig()?.role ?? null);
-
-  // ✅ “logueado” = token válido + me cargado
   isLoggedIn = computed(() => !!this.meSig() && this.isAuthenticated());
 
+  // ======================
+  // Permission helpers
+  // ======================
   hasPermission(p: string): boolean {
     return this.permissions().includes(p);
   }
@@ -121,17 +138,24 @@ export class AuthService {
     return !this.isTokenExpired(token);
   }
 
+  // ======================
+  // Logout
+  // ======================
   logout(): void {
     if (!this.isBrowser()) return;
-
     localStorage.removeItem(this.tokenKey);
     localStorage.removeItem(this.meKey);
     this.meSig.set(null);
-
     if (this.logoutTimer) {
       clearTimeout(this.logoutTimer);
       this.logoutTimer = null;
     }
+  }
+
+  logoutAndRedirect(): void {
+    this.logout();
+    sessionStorage.setItem('sessionExpired', '1');
+    this.router.navigate(['/login']);
   }
 
   // ======================
@@ -141,21 +165,18 @@ export class AuthService {
     const payload = this.decodeJwt(token);
     const exp = payload?.exp;
     if (!exp) return true;
-    const nowSec = Math.floor(Date.now() / 1000);
-    return exp <= nowSec;
+    return exp <= Math.floor(Date.now() / 1000);
   }
 
   private decodeJwt(token: string): JwtPayload | null {
     try {
       const part = token.split('.')[1];
       if (!part) return null;
-
       const base64 = part.replace(/-/g, '+').replace(/_/g, '/');
       const padded = base64.padEnd(
         base64.length + ((4 - (base64.length % 4)) % 4),
         '=',
       );
-
       return JSON.parse(atob(padded)) as JwtPayload;
     } catch {
       return null;
@@ -164,7 +185,6 @@ export class AuthService {
 
   scheduleAutoLogout(token?: string): void {
     if (!this.isBrowser()) return;
-
     const t = token ?? this.getToken();
     if (!t) return;
 
@@ -181,9 +201,7 @@ export class AuthService {
       this.logoutTimer = null;
     }
 
-    const expMs = exp * 1000;
-    const safetyMarginMs = 30_000;
-    const msLeft = expMs - Date.now() - safetyMarginMs;
+    const msLeft = exp * 1000 - Date.now() - 30_000;
 
     if (msLeft <= 0) {
       this.forceSessionExpired();
@@ -196,14 +214,8 @@ export class AuthService {
   forceSessionExpired(): void {
     if (!this.isBrowser()) return;
     if (this.logoutInProgress) return;
-
     this.logoutInProgress = true;
-
-    this.logout();
-    sessionStorage.setItem('sessionExpired', '1');
-
-    this.router.navigate(['/login']).finally(() => {
-      this.logoutInProgress = false;
-    });
+    this.logoutAndRedirect();
+    this.logoutInProgress = false;
   }
 }

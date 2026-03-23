@@ -1,8 +1,8 @@
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-
 import { StreamingPlatformsService } from '../../../services/streaming-platforms.service';
+import { parseApiError } from '../../../utils/error.utils';
 
 @Component({
   selector: 'app-create-platform-modal',
@@ -19,11 +19,10 @@ export class CreatePlatformModal {
 
   loading = false;
   errorMessage = '';
-
   name = '';
   active = true;
 
-  reset() {
+  private reset() {
     this.errorMessage = '';
     this.name = '';
     this.active = true;
@@ -47,8 +46,7 @@ export class CreatePlatformModal {
       this.created.emit();
       this.onClose();
     } catch (e: any) {
-      this.errorMessage =
-        e?.error?.message ?? 'No se pudo crear la plataforma.';
+      this.errorMessage = parseApiError(e);
     } finally {
       this.loading = false;
     }

@@ -36,30 +36,24 @@
               <th>Email</th>
               <th>Nombre</th>
               <th>Teléfono</th>
-              <th>Status</th>
               <th class="text-right">Acciones</th>
             </tr>
           </thead>
 
           <tbody>
             <tr *ngFor="let u of users">
-              <td><div class="font-medium">{{ u.email }}</div></td>
+              <td>
+                <div class="flex items-center gap-2">
+                  <span
+                    class="h-2 w-2 rounded-full flex-shrink-0"
+                    [ngClass]="(u.status | status).color"
+                  >
+                  </span>
+                  <span class="font-medium">{{ u.email }}</span>
+                </div>
+              </td>
               <td>{{ u.nombre || '—' }}</td>
               <td>{{ u.phone || '—' }}</td>
-
-              <td>
-                <span
-                  class="badge"
-                  [ngClass]="{
-                    'badge-success': u.status === 'ACTIVE',
-                    'badge-warning': u.status === 'INACTIVE',
-                    'badge-error': u.status === 'BLOCKED'
-                  }"
-                >
-                  {{ u.status }}
-                </span>
-              </td>
-
               <!-- Botón ⋮ -->
               <td class="text-right">
                 <button
@@ -95,28 +89,58 @@
     style="transform: translateX(-100%)"
     (click)="$event.stopPropagation()"
   >
-    <div class="bg-base-100 shadow rounded-box w-44 border border-base-200">
-      <ul class="menu p-2">
-        <li *ngIf="canUpdate">
-          <button type="button" (click)="openEdit(menuUser); closeMenu()">
-            Editar
-          </button>
-        </li>
+    <div
+      class="bg-base-100 shadow-lg rounded-xl border border-base-200 w-48 py-1 overflow-hidden"
+    >
+      <ul class="px-1">
+        <!-- Editar -->
         <li *ngIf="canUpdate">
           <button
             type="button"
+            class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm hover:bg-base-200 transition-colors text-left"
+            (click)="openEdit(menuUser); closeMenu()"
+          >
+            Editar
+          </button>
+        </li>
+
+        <!-- Permisos -->
+        <li *ngIf="canUpdate">
+          <button
+            type="button"
+            class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm hover:bg-base-200 transition-colors text-left"
             (click)="openPermissions(menuUser); closeMenu()"
           >
             Permisos
           </button>
         </li>
 
+        <!-- Divider antes de eliminar -->
+        <div
+          *ngIf="canDelete && canUpdate"
+          class="my-1 mx-2 h-px bg-base-200"
+        ></div>
+
+        <!-- Eliminar -->
         <li *ngIf="canDelete">
           <button
             type="button"
-            class="text-error"
+            class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm hover:bg-error/10 text-error transition-colors text-left"
             (click)="confirmDelete(menuUser); closeMenu()"
           >
+            <svg
+              class="w-3.5 h-3.5 shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+              />
+            </svg>
             Eliminar
           </button>
         </li>
@@ -127,9 +151,10 @@
   <!-- Modales -->
   <app-create-user-modal
     [open]="createOpen"
+    [currentUserRole]="auth.role()!"
     (close)="closeAll()"
     (created)="onCreated()"
-  ></app-create-user-modal>
+  />
 
   <app-edit-user-modal
     [open]="editOpen"
@@ -138,12 +163,16 @@
     (updated)="onUpdated()"
   ></app-edit-user-modal>
 
-  <app-delete-user-modal
+  <app-confirm-action-modal
     [open]="deleteOpen"
-    [user]="selected"
-    (close)="closeAll()"
-    (deleted)="onDeleted()"
-  ></app-delete-user-modal>
+    title="¿Eliminar usuario?"
+    [message]="'¿Seguro que quieres eliminar a <b>' + selected?.email + '</b>?'"
+    confirmLabel="Eliminar"
+    [danger]="true"
+    [loading]="loadingDelete"
+    (confirm)="onDeleteConfirm()"
+    (cancel)="closeAll()"
+  />
 
   <app-edit-user-permissions-modal
     [open]="permissionsOpen"

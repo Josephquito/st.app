@@ -6,8 +6,21 @@
       <span>{{ errorMessage }}</span>
     </div>
 
-    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-      <!-- Plataforma (igual) -->
+    <!-- Loading -->
+    <div
+      *ngIf="suppliersLoading"
+      class="flex items-center justify-center gap-3 py-12 text-base-content/40"
+    >
+      <span class="loading loading-spinner loading-md"></span>
+      <span class="text-sm">Cargando datos...</span>
+    </div>
+
+    <!-- Contenido -->
+    <div
+      *ngIf="!suppliersLoading"
+      class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3"
+    >
+      <!-- Plataforma -->
       <label class="form-control">
         <div class="label"><span class="label-text">Plataforma</span></div>
         <select class="select select-bordered" [(ngModel)]="platformId">
@@ -18,12 +31,9 @@
         </select>
       </label>
 
-      <!-- Proveedor (BUSCADOR + crear si no existe) -->
+      <!-- Proveedor -->
       <div class="form-control relative">
-        <div class="label">
-          <span class="label-text">Proveedor</span>
-        </div>
-
+        <div class="label"><span class="label-text">Proveedor</span></div>
         <input
           class="input input-bordered w-full"
           [(ngModel)]="supplierQuery"
@@ -31,28 +41,13 @@
           (focus)="supplierDropdownOpen = true"
           (blur)="onSupplierBlur()"
           (keydown.enter)="onSupplierEnter($event)"
-          placeholder="Busca por nombre/contacto o escribe para crear (ej: @juanpa)"
+          placeholder="Busca un proveedor..."
         />
-
-        <div class="label">
-          <span class="label-text-alt opacity-70" *ngIf="suppliersLoading">
-            Cargando proveedores...
-          </span>
-          <span
-            class="label-text-alt opacity-70"
-            *ngIf="!suppliersLoading && supplierId"
-          >
-            Seleccionado: <b>{{ getSupplierLabelById(supplierId) }}</b>
-          </span>
-        </div>
-
-        <!-- Dropdown resultados -->
         <div
           *ngIf="supplierDropdownOpen && supplierQuery.trim().length > 0"
-          class="absolute z-50 mt-1 w-full rounded-box border bg-base-100 shadow"
+          class="absolute left-0 right-0 top-[72px] z-50 rounded-box border bg-base-100 shadow"
         >
           <ul class="menu p-2">
-            <!-- Resultados existentes -->
             <li *ngFor="let s of supplierMatches; trackBy: trackSupplier">
               <button
                 type="button"
@@ -68,33 +63,21 @@
                 <span class="badge badge-ghost">Elegir</span>
               </button>
             </li>
-
-            <!-- Crear nuevo si no hay match exacto -->
-            <li *ngIf="canCreateSupplierFromQuery()">
+            <li *ngIf="supplierMatches.length === 0">
+              <span class="opacity-50 text-sm"
+                >Sin resultados para "{{ supplierQuery.trim() }}"</span
+              >
+            </li>
+            <div class="divider my-1"></div>
+            <li>
               <button
                 type="button"
                 class="justify-between"
-                (mousedown)="createSupplierFromQuery()"
-                [disabled]="creatingSupplier"
+                (mousedown)="openCreateSupplier()"
               >
-                <span class="truncate">
-                  Crear: <b>"{{ supplierQuery.trim() }}"</b>
-                </span>
-                <span class="badge badge-neutral">
-                  <span
-                    *ngIf="creatingSupplier"
-                    class="loading loading-spinner loading-xs"
-                  ></span>
-                  <span *ngIf="!creatingSupplier">Crear</span>
-                </span>
+                <span>+ Registrar nuevo proveedor</span>
+                <span class="badge badge-neutral">Nuevo</span>
               </button>
-            </li>
-
-            <!-- Sin resultados -->
-            <li
-              *ngIf="supplierMatches.length === 0 && !canCreateSupplierFromQuery()"
-            >
-              <span class="opacity-70">Sin resultados</span>
             </li>
           </ul>
         </div>
@@ -108,13 +91,11 @@
 
       <!-- Password -->
       <label class="form-control">
-        <div class="label">
-          <span class="label-text">Clave</span>
-        </div>
+        <div class="label"><span class="label-text">Clave</span></div>
         <input class="input input-bordered" [(ngModel)]="password" />
       </label>
 
-      <!-- Profiles -->
+      <!-- Perfiles -->
       <label class="form-control">
         <div class="label"><span class="label-text">Perfiles total</span></div>
         <input
@@ -124,34 +105,20 @@
         />
       </label>
 
-      <!-- Total cost -->
-      <label class="form-control">
-        <div class="label"><span class="label-text">Costo total</span></div>
-        <input
-          class="input input-bordered"
-          [ngModel]="totalCost"
-          (ngModelChange)="onTotalCostChange($event)"
-          placeholder="12,50 o 12.50"
-          inputmode="decimal"
-        />
-      </label>
-
-      <!-- Purchase date -->
+      <!-- Fecha compra -->
       <label class="form-control">
         <div class="label"><span class="label-text">Fecha compra</span></div>
         <input
           class="input input-bordered"
           type="date"
           [(ngModel)]="purchaseDate"
+          (ngModelChange)="onPurchaseDateChange()"
         />
       </label>
 
-      <!-- Periodo / Fecha corte (calculada) -->
-      <div class="form-control">
-        <div class="label">
-          <span class="label-text">Días asignados</span>
-        </div>
-
+      <!-- Duración -->
+      <div class="form-control md:col-span-2">
+        <div class="label"><span class="label-text">Días asignados</span></div>
         <div class="flex gap-2 flex-wrap">
           <select
             class="select select-bordered"
@@ -164,7 +131,6 @@
             <option [ngValue]="6">6 meses</option>
             <option [ngValue]="12">12 meses</option>
           </select>
-
           <input
             class="input input-bordered flex-1 min-w-[140px]"
             type="number"
@@ -174,40 +140,75 @@
             min="1"
           />
         </div>
-
         <div class="label">
           <span class="label-text-alt opacity-70">
-            Fecha de corte:
-            <b>{{ cutoffDate || '—' }}</b>
+            Fecha de corte: <b>{{ cutoffDate || '—' }}</b>
           </span>
         </div>
       </div>
 
-      <!-- Notes -->
-      <label class="form-control md:col-span-2">
-        <div class="label"><span class="label-text">Notas</span></div>
-        <textarea
-          class="textarea textarea-bordered"
-          [(ngModel)]="notes"
-        ></textarea>
-      </label>
+      <!-- Costo total con recálculo retroactivo -->
+      <div class="form-control md:col-span-2 pt-3 border-t border-base-200">
+        <div class="label">
+          <span class="label-text">Cambiar costo</span>
+          <span class="label-text-alt opacity-50">
+            Actual: <b>$ {{ account?.totalCost || '—' }}</b> · Recalcula todas
+            las ventas
+          </span>
+        </div>
+        <div class="flex gap-2">
+          <input
+            class="input input-bordered flex-1"
+            [ngModel]="correctCostValue"
+            (ngModelChange)="onCorrectCostChange($event)"
+            placeholder="Nuevo costo total"
+            inputmode="decimal"
+          />
+          <button
+            class="btn btn-neutral btn-sm self-center"
+            type="button"
+            (click)="submitCorrectCost()"
+            [disabled]="loadingCorrectCost || !correctCostValue"
+          >
+            <span
+              *ngIf="loadingCorrectCost"
+              class="loading loading-spinner loading-xs"
+            ></span>
+            Actualizar
+          </button>
+        </div>
+        <div *ngIf="correctCostError" class="label">
+          <span class="label-text-alt text-error">{{ correctCostError }}</span>
+        </div>
+        <div *ngIf="correctCostSuccess" class="label">
+          <span class="label-text-alt text-success"
+            >Costo actualizado correctamente.</span
+          >
+        </div>
+      </div>
     </div>
 
-    <div class="modal-action">
+    <!-- Modal crear proveedor -->
+    <app-create-supplier-modal
+      [open]="createSupplierOpen"
+      (close)="createSupplierOpen = false"
+      (created)="onSupplierCreated()"
+    />
+
+    <div *ngIf="!suppliersLoading" class="modal-action">
       <button
-        class="btn"
+        class="btn btn-ghost"
         type="button"
         (click)="onClose()"
-        [disabled]="loading || creatingSupplier"
+        [disabled]="loading"
       >
         Cancelar
       </button>
-
       <button
-        class="btn btn-primary"
+        class="btn btn-neutral"
         type="button"
         (click)="submit()"
-        [disabled]="loading || creatingSupplier"
+        [disabled]="loading"
       >
         <span *ngIf="loading" class="loading loading-spinner loading-sm"></span>
         Guardar

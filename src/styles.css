@@ -1,3 +1,8 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Modales por encima del navbar (z-index: 3000) */
+.modal {
+  z-index: 3100;
+}

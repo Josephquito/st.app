@@ -1,0 +1,141 @@
+<div class="page">
+  <div class="header">
+    <div>
+      <h1 class="title">Kardex</h1>
+      <p class="subtitle">Historial de movimientos de inventario y costos.</p>
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-error mb-4">
+    <span>{{ errorMessage }}</span>
+  </div>
+
+  <div class="flex flex-wrap items-end gap-4 mb-4">
+    <div class="flex flex-col gap-1">
+      <label class="text-sm text-base-content/60">Plataforma</label>
+      <select
+        class="select select-bordered select-sm w-52"
+        [(ngModel)]="selectedPlatformId"
+        (ngModelChange)="onPlatformChange()"
+      >
+        <option [ngValue]="null">Todas las plataformas</option>
+        <option *ngFor="let item of items" [ngValue]="item.platform?.id">
+          {{ item.platform?.name }}
+        </option>
+      </select>
+    </div>
+
+    <ng-container *ngIf="selectedItem">
+      <div class="flex gap-3">
+        <div
+          class="stat bg-base-100 border border-base-200 rounded-xl px-5 py-3 shadow-sm"
+        >
+          <div class="stat-title text-xs">Stock actual</div>
+          <div class="stat-value text-lg">{{ selectedItem.stock }}</div>
+          <div class="stat-desc">unidades</div>
+        </div>
+        <div
+          class="stat bg-base-100 border border-base-200 rounded-xl px-5 py-3 shadow-sm"
+        >
+          <div class="stat-title text-xs">Costo promedio</div>
+          <div class="stat-value text-lg text-primary">
+            ${{ formatCost(selectedItem.avgCost) }}
+          </div>
+          <div class="stat-desc">por perfil/día</div>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body">
+      <div *ngIf="loading" class="flex items-center gap-2 py-4">
+        <span class="loading loading-spinner loading-md"></span>
+        <span>Cargando movimientos...</span>
+      </div>
+
+      <div *ngIf="!loading" class="overflow-x-auto">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Tipo</th>
+              <th>Plataforma</th>
+              <th>Ref</th>
+              <th class="text-right">Qty</th>
+              <th class="text-right">Costo unitario</th>
+              <th class="text-right">Total</th>
+              <th class="text-right">Stock tras mov.</th>
+              <th class="text-right">avgCost tras mov.</th>
+              <th>Cuenta</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let m of movements">
+              <td class="text-base-content/60 text-xs whitespace-nowrap">
+                {{ formatDate(m.createdAt) }}
+              </td>
+
+              <td>
+                <span
+                  class="badge badge-sm font-semibold"
+                  [ngClass]="{
+                    'badge-success': m.type === 'IN',
+                    'badge-warning': m.type === 'OUT',
+                    'badge-info':    m.type === 'ADJUST'
+                  }"
+                >
+                  {{ m.type }}
+                </span>
+              </td>
+
+              <td class="whitespace-nowrap">
+                {{ m.item?.platform?.name ?? '—' }}
+              </td>
+
+              <td class="text-base-content/60 text-xs">{{ m.refType }}</td>
+
+              <td
+                class="text-right tabular-nums font-medium"
+                [class.text-success]="m.type === 'IN'"
+                [class.text-warning]="m.type === 'OUT'"
+                [class.text-info]="m.type === 'ADJUST'"
+              >
+                {{ m.type === 'IN' ? '+' : '-' }}{{ m.qty }}
+              </td>
+
+              <td class="text-right tabular-nums">
+                ${{ formatCost(m.unitCost) }}
+              </td>
+
+              <td
+                class="text-right tabular-nums font-semibold"
+                [class.text-success]="m.type === 'IN'"
+                [class.text-warning]="m.type === 'OUT' || m.type === 'ADJUST'"
+              >
+                {{ m.type === 'IN' ? '+' : '-' }}${{ formatCost(m.totalCost) }}
+              </td>
+
+              <td class="text-right tabular-nums">{{ m.stockAfter }}</td>
+
+              <td class="text-right tabular-nums text-primary font-medium">
+                ${{ formatCost(m.avgCostAfter) }}
+              </td>
+
+              <td class="text-base-content/60 text-xs">
+                {{ m.account?.email ?? '—' }}
+              </td>
+            </tr>
+
+            <tr *ngIf="movements.length === 0">
+              <td colspan="10" class="text-center text-base-content/50 py-8">
+                No hay movimientos registrados.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

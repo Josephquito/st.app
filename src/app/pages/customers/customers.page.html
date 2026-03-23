@@ -2,40 +2,116 @@
   <div class="header">
     <div>
       <h1 class="title">Clientes</h1>
-      <p class="subtitle">Crear, editar y administrar clientes.</p>
     </div>
 
-    <button
-      class="btn btn-neutral"
-      (click)="openCreate()"
-      [disabled]="!canCreate"
-      title="Requiere CUSTOMERS:CREATE"
-    >
-      Crear cliente
-    </button>
+    <div class="flex items-center gap-2">
+      <button class="btn btn-ghost btn-sm" (click)="openImportExport()">
+        Exportar / Importar
+      </button>
+      <button
+        class="btn btn-neutral btn-sm"
+        (click)="openCreate()"
+        [disabled]="!canCreate"
+      >
+        Crear cliente
+      </button>
+    </div>
   </div>
 
-  <!-- Error -->
-  <div *ngIf="errorMessage" class="alert alert-error">
+  <!-- Error general -->
+  <div *ngIf="errorMessage" class="alert alert-error mb-3">
     <span>{{ errorMessage }}</span>
   </div>
 
   <div class="card bg-base-100 shadow-sm">
     <div class="card-body">
-      <!-- Loading -->
-      <div *ngIf="loading" class="flex items-center gap-2">
+      <!-- Buscador + Filtros + Orden -->
+      <div class="flex flex-wrap items-center gap-2 mb-3">
+        <div class="relative">
+          <input
+            type="text"
+            class="input input-bordered input-sm pl-3 w-64"
+            placeholder="Buscar por nombre o contacto..."
+            [(ngModel)]="search"
+            (ngModelChange)="onSearchChange()"
+          />
+        </div>
+
+        <select
+          class="select select-bordered select-sm"
+          [(ngModel)]="statusFilter"
+          (ngModelChange)="onFilterChange()"
+        >
+          <option *ngFor="let opt of statusOptions" [value]="opt.value">
+            {{ opt.label }}
+          </option>
+        </select>
+
+        <select
+          class="select select-bordered select-sm"
+          [(ngModel)]="sourceFilter"
+          (ngModelChange)="onFilterChange()"
+        >
+          <option *ngFor="let opt of sourceOptions" [value]="opt.value">
+            {{ opt.label }}
+          </option>
+        </select>
+
+        <select
+          class="select select-bordered select-sm"
+          [(ngModel)]="sortBy"
+          (ngModelChange)="onFilterChange()"
+        >
+          <option *ngFor="let opt of sortOptions" [value]="opt.value">
+            {{ opt.label }}
+          </option>
+        </select>
+
+        <button
+          type="button"
+          class="btn btn-outline btn-sm"
+          (click)="sortOrder = sortOrder === 'asc' ? 'desc' : 'asc'; onFilterChange()"
+        >
+          {{ sortOrder === 'asc' ? '↑ A-Z' : '↓ Z-A' }}
+        </button>
+      </div>
+
+      <!-- Total -->
+      <p class="text-xs text-base-content/40 mb-2">
+        {{ total }} cliente{{ total !== 1 ? 's' : '' }} encontrado{{ total !== 1
+        ? 's' : '' }}
+      </p>
+
+      <div *ngIf="loading" class="flex items-center gap-2 py-6">
         <span class="loading loading-spinner loading-md"></span>
         <span>Cargando clientes...</span>
       </div>
 
-      <!-- Tabla -->
       <div *ngIf="!loading" class="overflow-x-auto">
-        <table class="table table w-full">
+        <table class="table w-full">
           <thead>
             <tr>
-              <th>Nombre</th>
+              <th
+                class="cursor-pointer select-none"
+                (click)="toggleSort('name')"
+              >
+                Nombre
+                <span *ngIf="sortBy === 'name'"
+                  >{{ sortOrder === 'asc' ? '↑' : '↓' }}</span
+                >
+              </th>
               <th>Contacto</th>
               <th>Origen</th>
+              <th
+                class="cursor-pointer select-none"
+                (click)="toggleSort('lastPurchaseAt')"
+              >
+                Última compra
+                <span *ngIf="sortBy === 'lastPurchaseAt'"
+                  >{{ sortOrder === 'asc' ? '↑' : '↓' }}</span
+                >
+              </th>
+              <th>Saldo</th>
               <th class="text-right">Acciones</th>
             </tr>
           </thead>
@@ -43,26 +119,46 @@
           <tbody>
             <tr
               *ngFor="let c of customers"
-              class="selectable-row"
-              (click)="goToDetail(c.id)"
+              class="hover cursor-pointer"
+              (click)="openDrawer(c)"
             >
+              <!-- Nombre con bolita de status -->
               <td>
-                <div class="font-medium">{{ c.name }}</div>
+                <div class="flex items-center gap-2">
+                  <span
+                    class="h-2 w-2 rounded-full flex-shrink-0"
+                    [ngClass]="(c.customerStatus ?? '' | status).color"
+                  ></span>
+                  <span class="font-medium">{{ c.name }}</span>
+                </div>
               </td>
 
               <td>{{ c.contact || '—' }}</td>
 
-              <td>{{ c.source || '—' }}</td>
+              <!-- Origen legible -->
+              <td>
+                <span *ngIf="!c.source" class="text-base-content/40">—</span>
+                <span *ngIf="c.source === 'INSTAGRAM'">Instagram</span>
+                <span *ngIf="c.source === 'FACEBOOK'">Facebook</span>
+                <span *ngIf="c.source === 'WHATSAPP'">WhatsApp</span>
+                <span *ngIf="c.source === 'REFERRAL'">Referido</span>
+                <span *ngIf="c.source === 'OTHER'"
+                  >{{ c.sourceNote || 'Otro' }}</span
+                >
+              </td>
 
-              <!-- Columna Acciones -->
+              <td class="text-sm text-base-content/60">
+                {{ c.lastPurchaseAt ? (c.lastPurchaseAt | date: "dd/MM/yyyy" :
+                "UTC") : '—' }}
+              </td>
+
+              <td class="text-sm">{{ c.balance || '—' }}</td>
+
               <td class="text-right" (click)="$event.stopPropagation()">
                 <button
                   type="button"
                   class="btn btn-ghost btn-sm"
                   (click)="toggleMenu(c, $event)"
-                  [disabled]="loadingRowId === c.id"
-                  aria-label="Acciones"
-                  title="Acciones"
                 >
                   ⋮
                 </button>
@@ -70,17 +166,44 @@
             </tr>
 
             <tr *ngIf="customers.length === 0">
-              <td colspan="4" class="text-center text-gray-500 py-6">
-                No hay clientes registrados.
+              <td colspan="6" class="text-center text-base-content/50 py-8">
+                No hay clientes{{ search ? ' que coincidan con la búsqueda' : '
+                registrados' }}.
               </td>
             </tr>
           </tbody>
         </table>
       </div>
+
+      <!-- Paginación -->
+      <div
+        *ngIf="totalPages > 1"
+        class="flex items-center justify-between mt-4"
+      >
+        <span class="text-xs text-base-content/40"
+          >Página {{ currentPage }} de {{ totalPages }}</span
+        >
+        <div class="flex gap-1">
+          <button
+            class="btn btn-ghost btn-xs"
+            [disabled]="currentPage === 1"
+            (click)="goToPage(currentPage - 1)"
+          >
+            ‹
+          </button>
+          <button
+            class="btn btn-ghost btn-xs"
+            [disabled]="currentPage === totalPages"
+            (click)="goToPage(currentPage + 1)"
+          >
+            ›
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- MENÚ FLOTANTE -->
+  <!-- Menú flotante -->
   <div
     *ngIf="menuOpen && menuCustomer"
     class="fixed z-[99999]"
@@ -89,19 +212,18 @@
     style="transform: translateX(-100%)"
     (click)="$event.stopPropagation()"
   >
-    <div class="bg-base-100 shadow rounded-box w-44 border border-base-200">
+    <div class="bg-base-100 shadow rounded-box w-48 border border-base-200">
       <ul class="menu p-2">
         <li *ngIf="canUpdate">
-          <button type="button" (click)="openEdit(menuCustomer); closeMenu()">
+          <button type="button" (click)="openEdit(menuCustomer!); closeMenu()">
             Editar
           </button>
         </li>
-
         <li *ngIf="canDelete">
           <button
             type="button"
             class="text-error"
-            (click)="confirmDelete(menuCustomer); closeMenu()"
+            (click)="confirmDelete(menuCustomer!); closeMenu()"
           >
             Eliminar
           </button>
@@ -115,19 +237,33 @@
     [open]="createOpen"
     (close)="closeAll()"
     (created)="onCreated()"
-  ></app-create-customer-modal>
-
+  />
   <app-edit-customer-modal
     [open]="editOpen"
     [customer]="selected"
     (close)="closeAll()"
     (updated)="onUpdated()"
-  ></app-edit-customer-modal>
-
+  />
   <app-delete-customer-modal
     [open]="deleteOpen"
     [customer]="selected"
     (close)="closeAll()"
     (deleted)="onDeleted()"
-  ></app-delete-customer-modal>
+  />
+  <app-import-export-customer-modal
+    [open]="importExportOpen"
+    [search]="search"
+    [statusFilter]="statusFilter"
+    [sourceFilter]="sourceFilter"
+    (close)="importExportOpen = false"
+    (imported)="onImported()"
+  />
+  <app-customer-drawer
+    [open]="drawerOpen"
+    [customer]="drawerCustomer"
+    (close)="closeDrawer()"
+    (edit)="onDrawerEdit($event)"
+    (delete)="onDrawerDelete($event)"
+    (notesUpdated)="onDrawerNotesUpdated($event)"
+  />
 </div>

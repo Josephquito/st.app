@@ -37,7 +37,6 @@
             <tr>
               <th>Empresa</th>
               <th>Teléfono</th>
-              <th>Status</th>
               <th class="text-right">Acciones</th>
             </tr>
           </thead>
@@ -51,9 +50,12 @@
             >
               <td>
                 <div class="font-medium flex items-center gap-2">
+                  <span
+                    class="h-2 w-2 rounded-full flex-shrink-0"
+                    [ngClass]="(c.status | status).color"
+                  >
+                  </span>
                   {{ c.name }}
-
-                  <!-- Badge de seleccionada -->
                   <span
                     *ngIf="isActive(c)"
                     class="badge badge-neutral badge-sm"
@@ -65,19 +67,6 @@
 
               <td>{{ c.phone || '—' }}</td>
 
-              <td>
-                <span
-                  class="badge"
-                  [ngClass]="{
-                    'badge-success': c.status === 'ACTIVE',
-                    'badge-warning': c.status === 'INACTIVE'
-                  }"
-                >
-                  {{ c.status }}
-                </span>
-              </td>
-
-              <!-- Botón ⋮ (NO selecciona fila) -->
               <td class="text-right">
                 <button
                   type="button"
@@ -92,7 +81,7 @@
             </tr>
 
             <tr *ngIf="companies.length === 0">
-              <td colspan="4" class="text-center text-gray-500 py-6">
+              <td colspan="3" class="text-center text-gray-500 py-6">
                 No hay companies registradas.
               </td>
             </tr>

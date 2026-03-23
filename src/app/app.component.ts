@@ -2,6 +2,7 @@ import {
   Component,
   ElementRef,
   HostListener,
+  OnInit,
   ViewChild,
   inject,
 } from '@angular/core';
@@ -22,38 +23,31 @@ import { CompanyContextService } from './services/company-context.service';
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
   private router = inject(Router);
   auth = inject(AuthService);
   companyCtx = inject(CompanyContextService);
 
-  // mobile panel
   mobileOpen = false;
-
-  // submenu desktop
   userMenuOpen = false;
-
-  // hide/show navbar
   navVisible = true;
+
   private lastScrollTop = 0;
   private readonly showThreshold = 10;
   private readonly hideAfter = 80;
 
   @ViewChild('mobileMenu') mobileMenu?: ElementRef<HTMLElement>;
 
-  // ✅ sesión válida = token no expirado
   get isLoggedIn(): boolean {
-    return this.auth.isAuthenticated();
+    return this.auth.isLoggedIn(); // ← usa el signal
   }
 
-  // ✅ nombre si hay, si no email, si no marca
   get displayName(): string {
     if (!this.isLoggedIn) return 'JOTAVIX';
     const me = this.auth.me();
     return me?.nombre || me?.email || 'JOTAVIX';
   }
 
-  // ✅ company activa
   get hasCompany(): boolean {
     return this.companyCtx.hasCompany();
   }
@@ -62,7 +56,13 @@ export class AppComponent {
     return this.companyCtx.companyName() || '';
   }
 
-  // --- acciones ---
+  ngOnInit() {
+    this.router.events.subscribe(() => {
+      if (this.mobileOpen) this.closeMobileMenu();
+      if (this.userMenuOpen) this.closeUserMenu();
+    });
+  }
+
   changeCompany() {
     this.companyCtx.setActiveCompany(null);
     this.router.navigate(['/companies']);
@@ -76,26 +76,22 @@ export class AppComponent {
     this.closeMobileMenu();
   }
 
-  // --- mobile ---
   toggleMobileMenu(event: Event) {
     event.stopPropagation();
     this.mobileOpen = !this.mobileOpen;
-    if (this.mobileOpen) this.navVisible = true;
-
-    // si abres mobile, cierra el submenu desktop
-    if (this.mobileOpen) this.closeUserMenu();
+    if (this.mobileOpen) {
+      this.navVisible = true;
+      this.closeUserMenu();
+    }
   }
 
   closeMobileMenu() {
     this.mobileOpen = false;
   }
 
-  // --- submenu desktop ---
   toggleUserMenu(event: Event) {
     event.stopPropagation();
     this.userMenuOpen = !this.userMenuOpen;
-
-    // si abres submenu, cierra mobile
     if (this.userMenuOpen) this.closeMobileMenu();
   }
 
@@ -113,46 +109,26 @@ export class AppComponent {
     this.logout();
   }
 
-  // click fuera => cerrar submenu + panel
   @HostListener('document:click', ['$event'])
   onClickOutside(event: MouseEvent) {
-    // cerrar dropdown desktop
     if (this.userMenuOpen) this.closeUserMenu();
-
-    // cerrar panel mobile
     if (!this.mobileOpen) return;
-
     const target = event.target as HTMLElement;
     const clickedInside =
       this.mobileMenu?.nativeElement.contains(target) ?? false;
     const clickedHamburger = target.closest('.hamburger');
-
     if (!clickedInside && !clickedHamburger) this.closeMobileMenu();
   }
 
-  // cerrar con ESC
   @HostListener('document:keydown.escape')
   onEsc() {
     if (this.userMenuOpen) this.closeUserMenu();
     if (this.mobileOpen) this.closeMobileMenu();
   }
 
-  // cerrar al navegar
-  constructor() {
-    this.router.events.subscribe(() => {
-      if (this.mobileOpen) this.closeMobileMenu();
-      if (this.userMenuOpen) this.closeUserMenu();
-    });
-  }
-
-  // scroll => cerrar mobile + hide/show navbar
   @HostListener('window:scroll', [])
   onWindowScroll(): void {
-    const st =
-      window.pageYOffset ||
-      document.documentElement.scrollTop ||
-      document.body.scrollTop ||
-      0;
+    const st = window.pageYOffset || document.documentElement.scrollTop || 0;
 
     if (this.mobileOpen) {
       this.closeMobileMenu();

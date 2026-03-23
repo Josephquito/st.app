@@ -4,6 +4,7 @@ import {
   CustomerDTO,
   CustomersService,
 } from '../../../services/customers.service';
+import { parseApiError } from '../../../utils/error.utils';
 
 @Component({
   selector: 'app-delete-customer-modal',
@@ -34,13 +35,11 @@ export class DeleteCustomerModal {
 
     this.loading = true;
     this.errorMessage = '';
-
     try {
       await this.api.remove(this.customer.id);
       this.deleted.emit();
     } catch (e: any) {
-      this.errorMessage =
-        e?.error?.message ?? 'No se pudo eliminar el cliente.';
+      this.errorMessage = parseApiError(e);
     } finally {
       this.loading = false;
     }

@@ -1,7 +1,6 @@
 <dialog class="modal" [class.modal-open]="open">
   <div class="modal-box max-w-2xl">
-    <h3 class="font-bold text-lg">Editar venta de perfil</h3>
-
+    <h3 class="font-bold text-lg">Editar venta</h3>
     <p class="text-sm opacity-70 mt-1">
       {{ account?.platform?.name || '—' }} · {{ account?.email || '—' }} ·
       Perfil #{{ sale?.profile?.profileNo || '—' }}
@@ -12,56 +11,75 @@
     </div>
 
     <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+      <!-- Cliente -->
       <div class="form-control relative md:col-span-2">
-        <div class="label">
-          <span class="label-text font-semibold">Cliente</span>
-        </div>
+        <div class="label"><span class="label-text">Cliente</span></div>
+
         <input
           class="input input-bordered w-full"
           [(ngModel)]="customerQuery"
           (input)="onCustomerQueryChange()"
           (focus)="customerDropdownOpen = true"
-          placeholder="Buscar cliente..."
+          (blur)="onCustomerBlur()"
+          (keydown.enter)="onCustomerEnter($event)"
+          placeholder="Busca por nombre o contacto..."
         />
 
+        <div class="label">
+          <span class="label-text-alt opacity-70" *ngIf="customersLoading"
+            >Buscando...</span
+          >
+          <span
+            class="label-text-alt opacity-70"
+            *ngIf="!customersLoading && customerId"
+          >
+            Seleccionado: <b>{{ getCustomerLabelById(customerId) }}</b>
+          </span>
+        </div>
+
         <div
-          *ngIf="customerDropdownOpen && customerMatches.length > 0"
-          class="absolute z-50 mt-1 w-full border bg-base-100 shadow-xl rounded-box"
+          *ngIf="customerDropdownOpen && customerQuery.trim().length > 0"
+          class="absolute left-0 right-0 top-[72px] z-50 rounded-box border bg-base-100 shadow"
         >
           <ul class="menu p-2">
-            <li *ngFor="let c of customerMatches">
+            <li *ngFor="let c of customerMatches; trackBy: trackCustomer">
               <button
                 type="button"
                 class="justify-between"
                 (mousedown)="selectCustomer(c)"
               >
-                <span
-                  >{{ c.name }}
-                  <small class="opacity-60">{{ c.contact }}</small></span
-                >
+                <span class="truncate">
+                  {{ c.name }}
+                  <span class="opacity-60" *ngIf="c.contact"
+                    >· {{ c.contact }}</span
+                  >
+                </span>
                 <span class="badge badge-ghost">Elegir</span>
               </button>
+            </li>
+            <li *ngIf="customerMatches.length === 0 && !customersLoading">
+              <span class="opacity-50 text-sm"
+                >Sin resultados para "{{ customerQuery.trim() }}"</span
+              >
             </li>
           </ul>
         </div>
       </div>
 
+      <!-- Precio venta -->
       <label class="form-control">
-        <div class="label">
-          <span class="label-text font-semibold">Precio venta</span>
-        </div>
+        <div class="label"><span class="label-text">Precio venta</span></div>
         <input
           class="input input-bordered"
           [(ngModel)]="salePrice"
-          placeholder="12,50"
+          placeholder="12,50 o 12.50"
           inputmode="decimal"
         />
       </label>
 
+      <!-- Fecha venta -->
       <label class="form-control">
-        <div class="label">
-          <span class="label-text font-semibold">Fecha inicio</span>
-        </div>
+        <div class="label"><span class="label-text">Fecha venta</span></div>
         <input
           class="input input-bordered"
           type="date"
@@ -70,52 +88,61 @@
         />
       </label>
 
+      <!-- Días asignados -->
       <div class="form-control md:col-span-2">
-        <div class="label">
-          <span class="label-text font-semibold">Días asignados</span>
-        </div>
-        <div class="flex gap-2">
+        <div class="label"><span class="label-text">Días asignados</span></div>
+        <div class="flex gap-2 flex-wrap">
           <select
             class="select select-bordered"
             [ngModel]="periodMonths"
             (ngModelChange)="onPeriodMonthsChange($event)"
           >
-            <option [ngValue]="null">Meses...</option>
+            <option [ngValue]="null">Meses (opcional)</option>
             <option [ngValue]="1">1 mes</option>
             <option [ngValue]="3">3 meses</option>
+            <option [ngValue]="6">6 meses</option>
+            <option [ngValue]="12">12 meses</option>
           </select>
           <input
-            class="input input-bordered flex-1"
+            class="input input-bordered flex-1 min-w-[140px]"
             type="number"
             [ngModel]="periodDays"
             (ngModelChange)="onPeriodDaysChange($event)"
-            placeholder="Días"
+            placeholder="Días (ej: 30, 60, 180)"
+            min="1"
           />
         </div>
         <div class="label">
           <span class="label-text-alt opacity-70">
-            Corte: <b>{{ cutoffDate || '—' }}</b> ({{ daysAssigned }} días)
+            Fecha fin (corte): <b>{{ cutoffDate || '—' }}</b>
+            <span *ngIf="daysAssigned > 0"> · ({{ daysAssigned }} días)</span>
           </span>
         </div>
       </div>
-
-      <label class="form-control md:col-span-2">
-        <div class="label">
-          <span class="label-text font-semibold">Notas</span>
-        </div>
-        <textarea
-          class="textarea textarea-bordered h-20"
-          [(ngModel)]="notes"
-        ></textarea>
-      </label>
     </div>
 
     <div class="modal-action">
-      <button class="btn" (click)="onClose()">Cancelar</button>
-      <button class="btn btn-primary" (click)="submit()" [disabled]="loading">
-        <span *ngIf="loading" class="loading loading-spinner"></span>
+      <button
+        class="btn btn-ghost"
+        type="button"
+        (click)="onClose()"
+        [disabled]="loading"
+      >
+        Cancelar
+      </button>
+      <button
+        class="btn btn-neutral"
+        type="button"
+        (click)="submit()"
+        [disabled]="loading"
+      >
+        <span *ngIf="loading" class="loading loading-spinner loading-sm"></span>
         Guardar cambios
       </button>
     </div>
   </div>
+
+  <form method="dialog" class="modal-backdrop">
+    <button type="button" (click)="onClose()">close</button>
+  </form>
 </dialog>

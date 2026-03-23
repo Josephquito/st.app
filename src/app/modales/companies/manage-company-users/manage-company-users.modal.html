@@ -1,105 +1,177 @@
 <dialog class="modal" [class.modal-open]="open">
-  <div class="modal-box max-w-3xl">
+  <div class="modal-box max-w-2xl">
     <h3 class="font-bold text-lg">
-      Miembros de: <span class="font-extrabold">{{ company?.name }}</span>
+      Miembros de <span class="font-extrabold">{{ company?.name }}</span>
     </h3>
 
     <div *ngIf="errorMessage" class="alert alert-error mt-3">
       <span>{{ errorMessage }}</span>
     </div>
 
-    <!-- Asignar -->
-    <div class="mt-4 grid gap-3">
-      <label class="form-control w-full">
-        <div class="label">
-          <span class="label-text">Asignar EMPLOYEE por IDs</span>
-          <span class="label-text-alt text-gray-500">Ej: 3, 5, 8</span>
-        </div>
-        <input
-          class="input input-bordered w-full"
-          [(ngModel)]="userIdsRaw"
-          placeholder="IDs separados por coma"
-        />
-      </label>
+    <!-- Loading inicial -->
+    <div
+      *ngIf="loading"
+      class="flex flex-col items-center justify-center py-12 gap-3 text-base-content/40"
+    >
+      <span class="loading loading-spinner loading-md"></span>
+      <span class="text-sm">Cargando...</span>
+    </div>
 
-      <div class="flex justify-end gap-2">
-        <button
-          class="btn"
-          type="button"
-          (click)="loadMembers()"
-          [disabled]="loading || saving"
-        >
-          Refrescar
-        </button>
-
-        <button
-          class="btn btn-neutral"
-          type="button"
-          (click)="assign()"
-          [disabled]="saving"
-        >
+    <ng-container *ngIf="!loading">
+      <!-- Asignados -->
+      <div class="mt-4">
+        <div class="flex items-center gap-2 mb-2">
           <span
-            *ngIf="saving"
-            class="loading loading-spinner loading-sm"
-          ></span>
-          Asignar
-        </button>
+            class="text-xs font-semibold uppercase tracking-widest text-base-content/40"
+            >Asignados</span
+          >
+          <div class="flex-1 h-px bg-base-200"></div>
+          <span class="text-xs text-base-content/30"
+            >{{ activeMembers.length }}</span
+          >
+        </div>
+
+        <div
+          *ngIf="activeMembers.length === 0"
+          class="py-3 text-center text-sm text-base-content/30 border border-dashed border-base-300 rounded-lg"
+        >
+          Sin miembros asignados.
+        </div>
+
+        <div
+          *ngIf="activeMembers.length > 0"
+          class="divide-y divide-base-200 border border-base-200 rounded-lg overflow-hidden"
+        >
+          <div
+            *ngFor="let m of activeMembers; trackBy: trackById"
+            class="flex items-center gap-3 px-4 py-2.5 hover:bg-base-200/40 transition-colors"
+          >
+            <!-- Bolita de status -->
+            <span
+              class="h-2 w-2 rounded-full flex-shrink-0"
+              [ngClass]="(m.user.status | status).color"
+            ></span>
+
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium truncate">
+                {{ m.user.nombre || '—' }}
+              </div>
+              <div class="text-xs text-base-content/40 truncate">
+                {{ m.user.email }}
+              </div>
+            </div>
+            <button
+              type="button"
+              class="btn btn-ghost btn-xs text-error"
+              (click)="unassign(m)"
+              [disabled]="saving"
+            >
+              Quitar
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
 
-    <!-- Lista -->
-    <div class="mt-4">
-      <div *ngIf="loading" class="flex items-center gap-2">
-        <span class="loading loading-spinner loading-md"></span>
-        <span>Cargando miembros...</span>
+      <!-- Anteriores -->
+      <div *ngIf="inactiveMembers.length > 0" class="mt-4">
+        <div class="flex items-center gap-2 mb-2">
+          <span
+            class="text-xs font-semibold uppercase tracking-widest text-base-content/40"
+            >Anteriores</span
+          >
+          <div class="flex-1 h-px bg-base-200"></div>
+          <span class="text-xs text-base-content/30"
+            >{{ inactiveMembers.length }}</span
+          >
+        </div>
+
+        <div
+          class="divide-y divide-base-200 border border-base-200 rounded-lg overflow-hidden"
+        >
+          <div
+            *ngFor="let m of inactiveMembers; trackBy: trackById"
+            class="flex items-center gap-3 px-4 py-2.5 hover:bg-base-200/40 transition-colors opacity-50"
+          >
+            <!-- Bolita de status -->
+            <span
+              class="h-2 w-2 rounded-full flex-shrink-0"
+              [ngClass]="(m.user.status | status).color"
+            ></span>
+
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium truncate">
+                {{ m.user.nombre || '—' }}
+              </div>
+              <div class="text-xs text-base-content/40 truncate">
+                {{ m.user.email }}
+              </div>
+            </div>
+            <button
+              type="button"
+              class="btn btn-ghost btn-xs"
+              (click)="assign(m.user.id)"
+              [disabled]="saving"
+            >
+              Re-asignar
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div *ngIf="!loading" class="overflow-x-auto">
-        <table class="table table-zebra">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Nombre</th>
-              <th>Email</th>
-              <th>Rol</th>
-              <th>Status</th>
-              <th class="text-right">Acción</th>
-            </tr>
-          </thead>
+      <!-- Disponibles -->
+      <div class="mt-4">
+        <div class="flex items-center gap-2 mb-2">
+          <span
+            class="text-xs font-semibold uppercase tracking-widest text-base-content/40"
+            >Disponibles</span
+          >
+          <div class="flex-1 h-px bg-base-200"></div>
+          <span class="text-xs text-base-content/30"
+            >{{ availableUsers.length }}</span
+          >
+        </div>
 
-          <tbody>
-            <tr *ngFor="let m of members">
-              <td>{{ m.user.id }}</td>
-              <td>{{ m.user.nombre || '—' }}</td>
-              <td class="font-medium">{{ m.user.email }}</td>
-              <td>{{ m.user.role }}</td>
-              <td>
-                <span class="badge" [ngClass]="badgeStatusClass(m.status)">
-                  {{ m.status }}
-                </span>
-              </td>
-              <td class="text-right">
-                <button
-                  type="button"
-                  class="btn btn-ghost btn-sm text-error"
-                  (click)="unassign(m)"
-                  [disabled]="saving"
-                  title="Desasignar (pone INACTIVE)"
-                >
-                  Quitar
-                </button>
-              </td>
-            </tr>
+        <div
+          *ngIf="availableUsers.length === 0"
+          class="py-3 text-center text-sm text-base-content/30 border border-dashed border-base-300 rounded-lg"
+        >
+          Todos los empleados ya están asignados.
+        </div>
 
-            <tr *ngIf="members.length === 0">
-              <td colspan="6" class="text-center text-gray-500 py-6">
-                No hay miembros asignados.
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div
+          *ngIf="availableUsers.length > 0"
+          class="divide-y divide-base-200 border border-base-200 rounded-lg overflow-hidden"
+        >
+          <div
+            *ngFor="let u of availableUsers; trackBy: trackById"
+            class="flex items-center gap-3 px-4 py-2.5 hover:bg-base-200/40 transition-colors"
+          >
+            <!-- Bolita de status -->
+            <span
+              class="h-2 w-2 rounded-full flex-shrink-0"
+              [ngClass]="(u.status | status).color"
+            ></span>
+
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium truncate">
+                {{ u.nombre || '—' }}
+              </div>
+              <div class="text-xs text-base-content/40 truncate">
+                {{ u.email }}
+              </div>
+            </div>
+            <button
+              type="button"
+              class="btn btn-ghost btn-xs"
+              (click)="assign(u.id)"
+              [disabled]="saving"
+            >
+              Asignar
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
+    </ng-container>
 
     <div class="modal-action">
       <button class="btn" type="button" (click)="onClose()" [disabled]="saving">

@@ -1,4 +1,3 @@
-// src/app/guards/permission.guard.ts
 import { Injectable } from '@angular/core';
 import {
   CanActivate,
@@ -16,11 +15,17 @@ export class PermissionGuard implements CanActivate {
   ) {}
 
   canActivate(route: ActivatedRouteSnapshot): boolean | UrlTree {
+    // Sin sesión → login
+    if (!this.auth.isLoggedIn()) {
+      return this.router.parseUrl('/login');
+    }
+
     const required = route.data['permissions'] as string[] | undefined;
     if (!required || required.length === 0) return true;
 
     if (this.auth.hasAllPermissions(required)) return true;
 
-    return this.router.parseUrl('/');
+    // Logueado pero sin permisos → forbidden
+    return this.router.parseUrl('/forbidden');
   }
 }

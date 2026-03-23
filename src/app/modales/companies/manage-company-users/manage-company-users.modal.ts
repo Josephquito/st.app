@@ -1,4 +1,11 @@
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  OnChanges,
+  Output,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -6,15 +13,19 @@ import {
   CompanyDTO,
   CompanyMemberDTO,
 } from '../../../services/companies.service';
+import { UsersService, UserDTO } from '../../../services/users.service';
+import { parseApiError } from '../../../utils/error.utils';
+import { StatusPipe } from '../../../pipes/status.pipe';
 
 @Component({
   selector: 'app-manage-company-users-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, StatusPipe],
   templateUrl: './manage-company-users.modal.html',
 })
-export class ManageCompanyUsersModal {
-  api = inject(CompaniesService);
+export class ManageCompanyUsersModal implements OnChanges {
+  companiesApi = inject(CompaniesService);
+  usersApi = inject(UsersService);
 
   @Input() open = false;
   @Input() company: CompanyDTO | null = null;
@@ -22,68 +33,65 @@ export class ManageCompanyUsersModal {
   @Output() close = new EventEmitter<void>();
   @Output() updated = new EventEmitter<void>();
 
-  loading = false;
-  saving = false;
+  loading = false; // solo para la carga inicial
+  saving = false; // para acciones (asignar/quitar)
   errorMessage = '';
 
   members: CompanyMemberDTO[] = [];
-
-  // input: "3, 5, 8"
-  userIdsRaw = '';
+  allUsers: UserDTO[] = [];
 
   async ngOnChanges() {
     if (this.open && this.company) {
-      await this.loadMembers();
+      await this.load(true);
     }
   }
 
-  onClose() {
-    this.errorMessage = '';
-    this.userIdsRaw = '';
-    this.members = [];
-    this.close.emit();
-  }
-
-  private parseIds(raw: string): number[] {
-    return raw
-      .split(',')
-      .map((x) => Number(x.trim()))
-      .filter((n) => Number.isInteger(n) && n > 0);
-  }
-
-  async loadMembers() {
-    if (!this.company) return;
-
-    this.loading = true;
+  // showSpinner = true solo en la carga inicial, false en refresh silencioso
+  private async load(showSpinner = false) {
+    if (showSpinner) this.loading = true;
     this.errorMessage = '';
     try {
-      this.members = await this.api.listMembers(this.company.id);
+      const [members, users] = await Promise.all([
+        this.companiesApi.listMembers(this.company!.id),
+        this.usersApi.findAll(),
+      ]);
+      this.members = members;
+      this.allUsers = users;
     } catch (e: any) {
-      this.errorMessage =
-        e?.error?.message ?? 'No se pudieron cargar miembros.';
+      this.errorMessage = parseApiError(e);
     } finally {
       this.loading = false;
     }
   }
 
-  async assign() {
+  get activeMembers(): CompanyMemberDTO[] {
+    return this.members.filter((m) => m.status === 'ACTIVE');
+  }
+
+  get inactiveMembers(): CompanyMemberDTO[] {
+    return this.members.filter((m) => m.status === 'INACTIVE');
+  }
+
+  get availableUsers(): UserDTO[] {
+    const assignedIds = new Set(this.members.map((m) => m.user.id));
+    return this.allUsers.filter(
+      (u) =>
+        u.role === 'EMPLOYEE' &&
+        u.status === 'ACTIVE' &&
+        !assignedIds.has(u.id),
+    );
+  }
+
+  async assign(userId: number) {
     if (!this.company || this.saving) return;
-
-    const ids = this.parseIds(this.userIdsRaw);
-    if (ids.length === 0) {
-      this.errorMessage = 'Ingresa IDs válidos separados por coma. Ej: 3, 5, 8';
-      return;
-    }
-
     this.saving = true;
     this.errorMessage = '';
     try {
-      await this.api.assignEmployees(this.company.id, ids);
-      this.userIdsRaw = '';
-      await this.loadMembers();
+      await this.companiesApi.assignEmployees(this.company.id, [userId]);
+      await this.load(); // sin spinner
       this.updated.emit();
     } catch (e: any) {
-      this.errorMessage = e?.error?.message ?? 'No se pudo asignar empleados.';
+      this.errorMessage = parseApiError(e);
     } finally {
       this.saving = false;
     }
@@ -91,25 +99,29 @@ export class ManageCompanyUsersModal {
 
   async unassign(member: CompanyMemberDTO) {
     if (!this.company || this.saving) return;
-
     this.saving = true;
     this.errorMessage = '';
     try {
-      await this.api.unassignEmployees(this.company.id, [member.user.id]);
-      await this.loadMembers();
+      await this.companiesApi.unassignEmployees(this.company.id, [
+        member.user.id,
+      ]);
+      await this.load(); // sin spinner
       this.updated.emit();
     } catch (e: any) {
-      this.errorMessage =
-        e?.error?.message ?? 'No se pudo desasignar el empleado.';
+      this.errorMessage = parseApiError(e);
     } finally {
       this.saving = false;
     }
   }
 
-  badgeStatusClass(s: string) {
-    return {
-      'badge-success': s === 'ACTIVE',
-      'badge-warning': s === 'INACTIVE',
-    };
+  onClose() {
+    this.errorMessage = '';
+    this.members = [];
+    this.allUsers = [];
+    this.close.emit();
+  }
+
+  trackById(_: number, item: any) {
+    return item.id;
   }
 }

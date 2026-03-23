@@ -1,0 +1,66 @@
+<dialog class="modal" [class.modal-open]="open">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg">Ajustar saldo — {{ supplier?.name }}</h3>
+
+    <p class="text-sm text-base-content/60 mt-1">
+      Saldo actual:
+      <span class="font-semibold text-base-content">
+        $ {{ supplier?.balance ?? '0.00' }}
+      </span>
+    </p>
+
+    <div *ngIf="errorMessage" class="alert alert-error mt-3">
+      <span>{{ errorMessage }}</span>
+    </div>
+
+    <div class="mt-4 grid gap-3">
+      <label class="form-control w-full">
+        <div class="label">
+          <span class="label-text">Tipo de movimiento</span>
+        </div>
+        <select class="select select-bordered w-full" [(ngModel)]="type">
+          <option value="DEPOSIT">Depósito — sube el saldo</option>
+          <option value="WITHDRAW">Retiro / ajuste — baja el saldo</option>
+        </select>
+      </label>
+
+      <label class="form-control w-full">
+        <div class="label"><span class="label-text">Monto</span></div>
+        <input
+          class="input input-bordered w-full"
+          type="number"
+          min="0.01"
+          step="0.01"
+          placeholder="Ej: 50.00"
+          [(ngModel)]="amount"
+          [disabled]="loading"
+        />
+      </label>
+    </div>
+
+    <div class="modal-action">
+      <button
+        class="btn"
+        type="button"
+        (click)="onClose()"
+        [disabled]="loading"
+      >
+        Cancelar
+      </button>
+
+      <button
+        class="btn btn-neutral"
+        type="button"
+        (click)="submit()"
+        [disabled]="loading"
+      >
+        <span *ngIf="loading" class="loading loading-spinner loading-sm"></span>
+        Guardar
+      </button>
+    </div>
+  </div>
+
+  <form method="dialog" class="modal-backdrop">
+    <button type="button" (click)="onClose()">close</button>
+  </form>
+</dialog>

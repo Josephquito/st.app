@@ -2,14 +2,21 @@ import { Routes } from '@angular/router';
 import { LoginComponent } from './login/login.component';
 import { GuestGuard } from './guards/guest.guard';
 import { PermissionGuard } from './guards/permission.guard';
+import { AuthGuard } from './guards/auth.guard';
 import { CompanySelectedGuard } from './guards/company-selected.guard';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'correo', pathMatch: 'full' },
+  { path: '', redirectTo: 'companies', pathMatch: 'full' },
 
   { path: 'login', component: LoginComponent, canActivate: [GuestGuard] },
 
-  // NIVEL 1
+  {
+    path: 'forbidden',
+    canActivate: [AuthGuard],
+    loadComponent: () =>
+      import('./pages/forbidden/forbidden.page').then((m) => m.ForbiddenPage),
+  },
+
   {
     path: 'users',
     canActivate: [PermissionGuard],
@@ -21,12 +28,11 @@ export const routes: Routes = [
   {
     path: 'companies',
     canActivate: [PermissionGuard],
-    data: { permissions: ['COMPANIES:READ'] }, // ajusta a tu permiso real
+    data: { permissions: ['COMPANIES:READ'] },
     loadComponent: () =>
       import('./pages/companies/companies.page').then((m) => m.CompaniesPage),
   },
 
-  // NIVEL 2 (scoped) => requiere company seleccionada + permiso
   {
     path: 'suppliers',
     canActivate: [CompanySelectedGuard, PermissionGuard],
@@ -62,14 +68,20 @@ export const routes: Routes = [
   },
 
   {
-    path: 'customer/:id',
+    path: 'kardex',
     canActivate: [CompanySelectedGuard, PermissionGuard],
-    data: { permissions: ['CUSTOMERS:READ'] },
+    data: { permissions: ['KARDEX:READ'] },
     loadComponent: () =>
-      import('./pages/customer-detail/customer-detail.page').then(
-        (m) => m.CustomerDetailPage,
+      import('./pages/kardex/kardex.page').then((m) => m.KardexPage),
+  },
+  {
+    path: 'import/accounts',
+    canActivate: [CompanySelectedGuard, PermissionGuard],
+    data: { permissions: ['STREAMING_ACCOUNTS:CREATE'] },
+    loadComponent: () =>
+      import('./pages/import-accounts/import-accounts.page').then(
+        (m) => m.ImportAccountsPage,
       ),
   },
-
-  { path: '**', redirectTo: 'users' },
+  { path: '**', redirectTo: 'companies' },
 ];

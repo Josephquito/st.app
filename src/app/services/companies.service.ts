@@ -90,20 +90,14 @@ export class CompaniesService {
     );
   }
 
-  // DELETE /companies/:id/users  body: { userIds: number[] }
-  // (Nest permite body en DELETE si lo mandas con http.request)
   unassignEmployees(
     companyId: number,
     userIds: number[],
   ): Promise<{ ok: true }> {
     return firstValueFrom(
-      this.http.request<{ ok: true }>(
-        'DELETE',
-        `${this.base}/${companyId}/users`,
-        {
-          body: { userIds },
-        },
-      ),
+      this.http.delete<{ ok: true }>(`${this.base}/${companyId}/users`, {
+        body: { userIds },
+      }),
     );
   }
 }

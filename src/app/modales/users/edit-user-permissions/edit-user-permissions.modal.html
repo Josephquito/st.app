@@ -1,114 +1,206 @@
-<!-- Backdrop -->
-<div *ngIf="open" class="fixed inset-0 z-[99990]">
-  <div class="absolute inset-0 bg-black/40" (click)="onClose()"></div>
-
-  <!-- Dialog -->
-  <div class="absolute inset-0 flex items-center justify-center p-4">
+<dialog class="modal" [class.modal-open]="open">
+  <div
+    class="modal-box max-w-3xl flex flex-col max-h-[90vh] p-0 overflow-hidden"
+  >
+    <!-- Header -->
     <div
-      class="w-full max-w-3xl bg-base-100 rounded-box shadow-xl border border-base-200 relative"
+      class="px-6 py-4 border-b border-base-200 flex items-center justify-between gap-4 shrink-0"
     >
-      <div
-        class="p-4 border-b border-base-200 flex items-start justify-between gap-3"
-      >
-        <div>
-          <h3 class="text-lg font-semibold">Permisos de usuario</h3>
-          <p class="text-sm text-base-content/70">{{ user?.email }}</p>
-        </div>
+      <div>
+        <h3 class="font-bold text-lg">Permisos de usuario</h3>
+        <p class="text-sm text-base-content/50">{{ user?.email }}</p>
+      </div>
+      <button class="btn btn-ghost btn-sm btn-circle" (click)="onClose()">
+        <svg
+          class="w-4 h-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      </button>
+    </div>
 
-        <button class="btn btn-ghost btn-sm" (click)="onClose()">✕</button>
+    <!-- Body -->
+    <div class="flex flex-col flex-1 overflow-hidden px-6 py-4 gap-3">
+      <!-- Error -->
+      <div *ngIf="errorMessage" class="alert alert-error text-sm py-2.5">
+        <span>{{ errorMessage }}</span>
       </div>
 
-      <div class="p-4">
-        <!-- Error -->
-        <div *ngIf="errorMessage" class="alert alert-error mb-3">
-          <span>{{ errorMessage }}</span>
-        </div>
+      <!-- Loading -->
+      <div
+        *ngIf="loading"
+        class="flex flex-col items-center justify-center py-16 gap-3 text-base-content/40"
+      >
+        <span class="loading loading-spinner loading-md"></span>
+        <span class="text-sm">Cargando permisos...</span>
+      </div>
 
-        <!-- Loading -->
-        <div *ngIf="loading" class="flex items-center gap-2 py-6">
-          <span class="loading loading-spinner loading-md"></span>
-          <span>Cargando permisos...</span>
-        </div>
-
-        <div *ngIf="!loading">
-          <!-- Search -->
-          <div class="flex items-center gap-2 mb-3">
+      <ng-container *ngIf="!loading">
+        <!-- Search + contador -->
+        <div class="flex items-center gap-3 shrink-0">
+          <label
+            class="input input-bordered flex items-center gap-2 flex-1 h-10 text-sm"
+          >
+            <svg
+              class="w-3.5 h-3.5 text-base-content/40 shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+              />
+            </svg>
             <input
-              class="input input-bordered w-full"
-              placeholder="Buscar (label, key, resource, action)..."
+              class="grow bg-transparent outline-none"
+              placeholder="Buscar permiso..."
               [(ngModel)]="search"
               [disabled]="saving"
             />
+            <button
+              *ngIf="search"
+              class="text-base-content/30 hover:text-base-content/60 transition-colors"
+              (click)="search = ''"
+            >
+              <svg
+                class="w-3.5 h-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </label>
+          <span class="text-xs text-base-content/50 shrink-0 whitespace-nowrap">
+            <span class="font-semibold">{{ selectedCount }}</span> / {{
+            totalCount }} seleccionados
+          </span>
+        </div>
+
+        <!-- Lista -->
+        <div class="flex-1 overflow-y-auto rounded-xl border border-base-200">
+          <div
+            *ngFor="let g of grouped; trackBy: trackByGroup"
+            class="p-4 border-b border-base-200 last:border-b-0"
+          >
+            <!-- Título grupo -->
+            <div class="flex items-center gap-2 mb-3">
+              <span
+                class="text-xs font-semibold uppercase tracking-widest text-base-content/40"
+                >{{ g.title }}</span
+              >
+              <div class="flex-1 h-px bg-base-200"></div>
+              <span class="text-xs text-base-content/30"
+                >{{ g.items.length }}</span
+              >
+            </div>
+
+            <!-- Grid permisos -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-1">
+              <label
+                *ngFor="let p of g.items; trackBy: trackByPermission"
+                class="flex items-start gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors border"
+                [class.border-transparent]="!isChecked(p.id)"
+                [class.hover:bg-base-200]="!isChecked(p.id)"
+                [class.bg-base-200]="isChecked(p.id)"
+                [class.border-base-300]="isChecked(p.id)"
+                [class.opacity-60]="!canUpdate"
+              >
+                <input
+                  type="checkbox"
+                  class="checkbox checkbox-sm mt-0.5 shrink-0"
+                  [checked]="isChecked(p.id)"
+                  [disabled]="!canUpdate || saving"
+                  (change)="onToggle(p.id, $event)"
+                />
+                <div class="leading-tight min-w-0">
+                  <div class="text-sm font-medium truncate">
+                    {{ p.label || p.key }}
+                  </div>
+                </div>
+              </label>
+            </div>
           </div>
 
-          <!-- List -->
+          <!-- Empty state -->
           <div
-            class="max-h-[60vh] overflow-auto border border-base-200 rounded-box"
+            *ngIf="filteredCatalog.length === 0"
+            class="flex flex-col items-center justify-center py-16 gap-2 text-base-content/30"
           >
-            <div
-              *ngFor="let g of grouped"
-              class="p-3 border-b border-base-200 last:border-b-0"
+            <svg
+              class="w-8 h-8"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="1.5"
             >
-              <div class="font-semibold mb-2">{{ g.title }}</div>
-
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <label
-                  *ngFor="let p of g.items"
-                  class="flex items-start gap-3 p-2 rounded-btn hover:bg-base-200/60 cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    class="checkbox checkbox-sm mt-1"
-                    [checked]="isChecked(p.id)"
-                    [disabled]="!canUpdate || saving"
-                    (change)="onToggle(p.id, $event)"
-                  />
-
-                  <div class="leading-tight">
-                    <div class="font-medium">
-                      {{ p.label || p.key }}
-                      <span
-                        *ngIf="p.isSystem"
-                        class="badge badge-ghost badge-sm ml-2"
-                        >SYSTEM</span
-                      >
-                    </div>
-                    <div class="text-xs text-base-content/60">
-                      {{ p.key }} · {{ p.resource }}:{{ p.action }}
-                    </div>
-                  </div>
-                </label>
-              </div>
-            </div>
-
-            <div
-              *ngIf="filteredCatalog.length === 0"
-              class="p-6 text-center text-base-content/60"
-            >
-              No hay permisos que coincidan con la búsqueda.
-            </div>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+              />
+            </svg>
+            <p class="text-sm">
+              Sin resultados para
+              <span class="font-medium">"{{ search }}"</span>
+            </p>
           </div>
         </div>
-      </div>
+      </ng-container>
+    </div>
 
+    <!-- Footer -->
+    <div class="modal-action px-6 py-4 border-t border-base-200 mt-0 shrink-0">
       <div
-        class="p-4 border-t border-base-200 flex items-center justify-end gap-2"
+        *ngIf="!canUpdate"
+        class="flex items-center gap-1.5 text-xs text-base-content/40 mr-auto"
       >
-        <button class="btn btn-ghost" (click)="onClose()" [disabled]="saving">
-          Cancelar
-        </button>
-        <button
-          class="btn btn-primary"
-          (click)="save()"
-          [disabled]="saving || loading || !canUpdate"
+        <svg
+          class="w-3.5 h-3.5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
         >
-          <span
-            *ngIf="saving"
-            class="loading loading-spinner loading-sm mr-2"
-          ></span>
-          Guardar
-        </button>
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
+          />
+        </svg>
+        Solo lectura
       </div>
+      <button class="btn" (click)="onClose()" [disabled]="saving">
+        Cancelar
+      </button>
+      <button
+        class="btn btn-neutral"
+        (click)="save()"
+        [disabled]="saving || loading || !canUpdate"
+      >
+        <span *ngIf="saving" class="loading loading-spinner loading-sm"></span>
+        {{ saving ? 'Guardando...' : 'Guardar cambios' }}
+      </button>
     </div>
   </div>
-</div>
+  <form method="dialog" class="modal-backdrop" (click)="onClose()">
+    <button>close</button>
+  </form>
+</dialog>

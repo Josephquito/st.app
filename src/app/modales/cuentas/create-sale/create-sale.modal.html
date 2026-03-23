@@ -2,21 +2,14 @@
   <div class="modal-box max-w-2xl">
     <h3 class="font-bold text-lg">Vender perfil</h3>
 
-    <p class="text-sm opacity-70 mt-1">
-      {{ account?.platform?.name || '—' }} · {{ account?.email || '—' }} ·
-      Perfil #{{ profile?.profileNo || '—' }}
-    </p>
-
     <div *ngIf="errorMessage" class="alert alert-error mt-3">
       <span>{{ errorMessage }}</span>
     </div>
 
     <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-      <!-- Cliente (BUSCADOR + crear si no existe) -->
+      <!-- Cliente typeahead -->
       <div class="form-control relative md:col-span-2">
-        <div class="label">
-          <span class="label-text">Cliente</span>
-        </div>
+        <div class="label"><span class="label-text">Cliente</span></div>
 
         <input
           class="input input-bordered w-full"
@@ -25,14 +18,13 @@
           (focus)="customerDropdownOpen = true"
           (blur)="onCustomerBlur()"
           (keydown.enter)="onCustomerEnter($event)"
-          placeholder="Busca por nombre/contacto o escribe para crear (ej: @juanpa)"
+          placeholder="Busca por nombre o contacto..."
         />
 
         <div class="label">
           <span class="label-text-alt opacity-70" *ngIf="customersLoading">
-            Cargando clientes...
+            Buscando...
           </span>
-
           <span
             class="label-text-alt opacity-70"
             *ngIf="!customersLoading && customerId"
@@ -41,13 +33,12 @@
           </span>
         </div>
 
-        <!-- Dropdown resultados -->
+        <!-- Dropdown -->
         <div
           *ngIf="customerDropdownOpen && customerQuery.trim().length > 0"
-          class="absolute z-50 mt-1 w-full rounded-box border bg-base-100 shadow"
+          class="absolute left-0 right-0 top-[72px] z-50 rounded-box border bg-base-100 shadow"
         >
           <ul class="menu p-2">
-            <!-- Resultados existentes -->
             <li *ngFor="let c of customerMatches; trackBy: trackCustomer">
               <button
                 type="button"
@@ -64,32 +55,23 @@
               </button>
             </li>
 
-            <!-- Crear nuevo si no hay match exacto -->
-            <li *ngIf="canCreateCustomerFromQuery()">
+            <li *ngIf="customerMatches.length === 0 && !customersLoading">
+              <span class="opacity-50 text-sm"
+                >Sin resultados para "{{ customerQuery.trim() }}"</span
+              >
+            </li>
+
+            <div class="divider my-1"></div>
+
+            <li>
               <button
                 type="button"
                 class="justify-between"
-                (mousedown)="createCustomerFromQuery()"
-                [disabled]="creatingCustomer"
+                (mousedown)="createCustomerOpen = true"
               >
-                <span class="truncate">
-                  Crear: <b>"{{ customerQuery.trim() }}"</b>
-                </span>
-                <span class="badge badge-neutral">
-                  <span
-                    *ngIf="creatingCustomer"
-                    class="loading loading-spinner loading-xs"
-                  ></span>
-                  <span *ngIf="!creatingCustomer">Crear</span>
-                </span>
+                <span>+ Registrar nuevo cliente</span>
+                <span class="badge badge-neutral">Nuevo</span>
               </button>
-            </li>
-
-            <!-- Sin resultados -->
-            <li
-              *ngIf="customerMatches.length === 0 && !canCreateCustomerFromQuery()"
-            >
-              <span class="opacity-70">Sin resultados</span>
             </li>
           </ul>
         </div>
@@ -113,15 +95,13 @@
           class="input input-bordered"
           type="date"
           [(ngModel)]="saleDate"
-          (ngModelChange)="onSaleDateChange($event)"
+          (ngModelChange)="onSaleDateChange()"
         />
       </label>
 
-      <!-- Periodo / Días asignados + Fecha fin -->
+      <!-- Días asignados -->
       <div class="form-control md:col-span-2">
-        <div class="label">
-          <span class="label-text">Días asignados</span>
-        </div>
+        <div class="label"><span class="label-text">Días asignados</span></div>
 
         <div class="flex gap-2 flex-wrap">
           <select
@@ -149,38 +129,26 @@
         <div class="label">
           <span class="label-text-alt opacity-70">
             Fecha fin (corte): <b>{{ cutoffDate || '—' }}</b>
-            <span *ngIf="daysAssigned > 0" class="opacity-70">
-              · ({{ daysAssigned }} días)
-            </span>
+            <span *ngIf="daysAssigned > 0"> · ({{ daysAssigned }} días)</span>
           </span>
         </div>
       </div>
-
-      <!-- Notas -->
-      <label class="form-control md:col-span-2">
-        <div class="label"><span class="label-text">Notas</span></div>
-        <textarea
-          class="textarea textarea-bordered"
-          [(ngModel)]="notes"
-        ></textarea>
-      </label>
     </div>
 
     <div class="modal-action">
       <button
-        class="btn"
+        class="btn btn-ghost"
         type="button"
         (click)="onClose()"
-        [disabled]="loading || creatingCustomer"
+        [disabled]="loading"
       >
         Cancelar
       </button>
-
       <button
-        class="btn btn-primary"
+        class="btn btn-neutral"
         type="button"
         (click)="submit()"
-        [disabled]="loading || creatingCustomer"
+        [disabled]="loading"
       >
         <span *ngIf="loading" class="loading loading-spinner loading-sm"></span>
         Vender
@@ -191,4 +159,10 @@
   <form method="dialog" class="modal-backdrop">
     <button type="button" (click)="onClose()">close</button>
   </form>
+
+  <app-create-customer-modal
+    [open]="createCustomerOpen"
+    (close)="createCustomerOpen = false"
+    (created)="onCustomerCreated()"
+  />
 </dialog>

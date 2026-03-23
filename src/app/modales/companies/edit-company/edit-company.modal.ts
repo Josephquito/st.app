@@ -1,11 +1,18 @@
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  OnChanges,
+  Output,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
-  CompanyDTO,
   CompaniesService,
-  CompanyStatus,
+  CompanyDTO,
 } from '../../../services/companies.service';
+import { parseApiError } from '../../../utils/error.utils';
 
 @Component({
   selector: 'app-edit-company-modal',
@@ -13,7 +20,7 @@ import {
   imports: [CommonModule, FormsModule],
   templateUrl: './edit-company.modal.html',
 })
-export class EditCompanyModal {
+export class EditCompanyModal implements OnChanges {
   api = inject(CompaniesService);
 
   @Input() open = false;
@@ -24,16 +31,13 @@ export class EditCompanyModal {
 
   loading = false;
   errorMessage = '';
-
   name = '';
   phone = '';
-  status: CompanyStatus = 'ACTIVE';
 
   ngOnChanges() {
     if (this.open && this.company) {
       this.name = this.company.name ?? '';
       this.phone = this.company.phone ?? '';
-      this.status = (this.company.status ?? 'ACTIVE') as CompanyStatus;
       this.loading = false;
       this.errorMessage = '';
     }
@@ -46,28 +50,25 @@ export class EditCompanyModal {
   async submit() {
     if (!this.company || this.loading) return;
 
-    this.errorMessage = '';
+    const name = this.name.trim();
+    const phone = this.phone.trim();
 
-    if (this.name.trim().length < 2) {
+    if (name.length < 2) {
       this.errorMessage = 'El nombre debe tener al menos 2 caracteres.';
       return;
     }
-    if (this.phone.trim().length < 5) {
+    if (phone.length < 5) {
       this.errorMessage = 'El teléfono debe tener al menos 5 caracteres.';
       return;
     }
 
     this.loading = true;
+    this.errorMessage = '';
     try {
-      await this.api.update(this.company.id, {
-        name: this.name.trim(),
-        phone: this.phone.trim(),
-        status: this.status,
-      });
+      await this.api.update(this.company.id, { name, phone });
       this.updated.emit();
     } catch (e: any) {
-      this.errorMessage =
-        e?.error?.message ?? 'No se pudo actualizar la company.';
+      this.errorMessage = parseApiError(e);
     } finally {
       this.loading = false;
     }

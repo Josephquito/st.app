@@ -1,0 +1,309 @@
+<!-- Overlay -->
+<div
+  *ngIf="open"
+  class="fixed inset-0 z-[100] bg-black/30"
+  (click)="onClose()"
+></div>
+
+<!-- Drawer panel -->
+<div
+  class="fixed top-0 right-0 h-full z-[3001] bg-base-100 shadow-xl flex flex-row transition-all duration-300 w-full"
+  [class.max-w-2xl]="!expanded"
+  [class.max-w-6xl]="expanded"
+  [class.translate-x-0]="open"
+  [class.translate-x-full]="!open"
+>
+  <!-- Botón expand/collapse -->
+  <button
+    type="button"
+    class="flex items-center justify-center w-5 shrink-0 bg-base-200/60 hover:bg-base-300 transition-colors border-r border-base-200 cursor-pointer"
+    (click)="expanded = !expanded"
+    [title]="expanded ? 'Colapsar' : 'Expandir'"
+  >
+    <span class="text-base-content/40 text-xs">{{ expanded ? "›" : "‹" }}</span>
+  </button>
+
+  <div class="flex flex-col flex-1 min-w-0 overflow-hidden">
+    <!-- Header -->
+    <div
+      class="flex items-center justify-between px-5 py-4 border-b border-base-200"
+    >
+      <div>
+        <div class="flex items-center gap-2">
+          <h2 class="font-bold text-lg">
+            {{ account?.platform?.name || "Cuenta" }}
+          </h2>
+          <span
+            class="h-2 w-2 rounded-full flex-shrink-0"
+            [ngClass]="(account?.status ?? '' | status).color"
+          ></span>
+        </div>
+        <p class="text-sm text-base-content/60 font-mono">
+          {{ account?.email }}
+        </p>
+        <p class="text-xs text-base-content/40 mt-0.5">
+          Compra:
+          {{
+            account?.purchaseDate
+              ? (account!.purchaseDate | date: "dd/MM/yyyy" : "UTC")
+              : "—"
+          }}
+        </p>
+      </div>
+      <button
+        class="btn btn-ghost btn-sm btn-circle"
+        type="button"
+        (click)="onClose()"
+      >
+        ✕
+      </button>
+    </div>
+
+    <!-- Stats -->
+    <div
+      class="px-5 py-3 border-b border-base-200 grid grid-cols-3 gap-3 text-sm"
+    >
+      <div>
+        <div class="text-base-content/50 text-xs mb-0.5">Proveedor</div>
+        <div class="font-medium">{{ account?.supplier?.name || "—" }}</div>
+      </div>
+      <div>
+        <div class="text-base-content/50 text-xs mb-0.5">Costo total</div>
+        <div class="font-medium">$ {{ account?.totalCost }}</div>
+      </div>
+      <div>
+        <div class="text-base-content/50 text-xs mb-0.5">Días restantes</div>
+        <div>
+          <span
+            class="badge badge-sm"
+            [ngClass]="
+              (account?.cutoffDate | alert: account?.status).badgeClass
+            "
+          >
+            {{ (account?.cutoffDate | alert: account?.status).label }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alerta inactiva -->
+    <div
+      *ngIf="account?.status === 'INACTIVE'"
+      class="mx-5 mt-3 alert alert-warning"
+    >
+      <span>Esta cuenta está inactiva. No se pueden realizar ventas.</span>
+    </div>
+
+    <!-- Error -->
+    <div *ngIf="errorMessage" class="mx-5 mt-3 alert alert-error">
+      <span>{{ errorMessage }}</span>
+    </div>
+
+    <!-- Loading -->
+    <div *ngIf="loading" class="flex-1 flex items-center justify-center">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+
+    <!-- Perfiles -->
+    <div *ngIf="!loading" class="flex-1 overflow-y-auto px-5 py-4">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-semibold text-sm">
+          Perfiles ({{ account?.profiles?.length ?? 0 }})
+        </h3>
+      </div>
+
+      <app-account-profiles-table
+        [profiles]="account?.profiles || []"
+        [salesByProfileId]="salesByProfileId"
+        [expanded]="expanded"
+        [canSell]="canSell"
+        [accountLabels]="accountLabels"
+        [loading]="loading"
+        [copiedKey]="copiedKey"
+        [accountStatus]="account?.status ?? ''"
+        (sell)="openSell($event)"
+        (emptyProfile)="onEmptyProfile($event)"
+        (removeSlot)="onRemoveSlot($event)"
+        (addSlot)="onAddSlot()"
+        (emptyAll)="onEmptyAll()"
+        (editSale)="onEditProfile($event)"
+        (renewSale)="onRenewProfile($event)"
+        (pauseSale)="onPauseSale($event)"
+        (resumeSale)="onResumeSale($event)"
+        (refundSale)="onRefundSale($event)"
+        (copyRenew)="copyRenewMessage($event)"
+        (copyInfo)="copyProfileInfo($event)"
+        (copyPassword)="copyPasswordChange($event)"
+        (noteBlur)="onSaleNoteBlur($event.profile, $event.event)"
+        (renewalStatusChange)="
+          onRenewalStatusChange($event.profile, $event.event)
+        "
+        (assignLabel)="onAssignLabel($event.profile, $event.labelId)"
+        (menuToggle)="onMenuToggle($event)"
+      />
+    </div>
+  </div>
+</div>
+
+<!-- Modales confirm -->
+<app-confirm-action-modal
+  [open]="confirmEmptyOpen"
+  title="¿Vaciar perfil?"
+  [message]="
+    'Estás a punto de vaciar el <strong>Perfil #' +
+    profileToEmpty?.profileNo +
+    '</strong>. El cliente ya no tendrá acceso y el perfil volverá a estar <strong>Disponible</strong>.'
+  "
+  confirmLabel="Sí, vaciar perfil"
+  [danger]="false"
+  [loading]="loading"
+  (confirm)="confirmEmpty()"
+  (cancel)="cancelEmpty()"
+/>
+<app-confirm-action-modal
+  [open]="confirmRemoveSlotOpen"
+  title="¿Eliminar slot?"
+  [message]="
+    'Estás a punto de eliminar el <strong>Perfil #' +
+    profileToRemove?.profileNo +
+    '</strong>. Esto reducirá el total de perfiles de la cuenta en 1.'
+  "
+  confirmLabel="Sí, eliminar"
+  [danger]="true"
+  [loading]="loading"
+  (confirm)="confirmRemoveSlot()"
+  (cancel)="cancelRemoveSlot()"
+/>
+<app-confirm-action-modal
+  [open]="confirmEmptyAllOpen"
+  title="¿Vaciar todos los perfiles?"
+  [message]="
+    'Todos los perfiles vendidos de <strong>' +
+    account?.email +
+    '</strong> volverán a estar disponibles. Las ventas activas se cerrarán.'
+  "
+  confirmLabel="Sí, vaciar todos"
+  [danger]="false"
+  [loading]="loading"
+  (confirm)="confirmEmptyAll()"
+  (cancel)="cancelEmptyAll()"
+/>
+
+<!-- Modales internos -->
+<app-create-sale-modal
+  [open]="createSaleOpen"
+  [account]="account"
+  [profile]="selectedProfile"
+  (close)="createSaleOpen = false; selectedProfile = null"
+  (created)="onSaleDone()"
+/>
+<app-edit-sale-modal
+  [open]="editSaleOpen"
+  [sale]="selectedSale"
+  [account]="account"
+  (close)="editSaleOpen = false; selectedSale = null"
+  (updated)="onSaleUpdated()"
+/>
+<app-renew-sale-modal
+  [open]="renewSaleOpen"
+  [sale]="saleToRenew"
+  [account]="account"
+  (close)="renewSaleOpen = false; saleToRenew = null"
+  (renewed)="onSaleRenewed()"
+/>
+
+<!-- Menú flotante — fuera del drawer panel, igual que antes -->
+<div
+  *ngIf="menuOpen && menuProfile"
+  class="fixed z-[3200]"
+  [style.left.px]="menuX"
+  [style.top.px]="menuY"
+  (click)="$event.stopPropagation()"
+>
+  <div class="bg-base-100 shadow rounded-box w-48 border border-base-200">
+    <ul class="menu p-2">
+      <li *ngIf="!canSell">
+        <span class="opacity-70 text-sm">Sin permiso</span>
+      </li>
+      <ng-container *ngIf="canSell">
+        <li>
+          <button
+            type="button"
+            (click)="onEditProfile(menuProfile!); closeMenu()"
+          >
+            Editar venta
+          </button>
+        </li>
+        <li>
+          <button
+            type="button"
+            (click)="copyRenewMessage(menuProfile!); closeMenu()"
+          >
+            Copiar renovar
+          </button>
+        </li>
+        <li>
+          <button
+            type="button"
+            (click)="onRenewProfile(menuProfile!); closeMenu()"
+          >
+            Renovar venta
+          </button>
+        </li>
+        <li *ngIf="getSaleForProfile(menuProfile!)?.status === 'ACTIVE'">
+          <button
+            type="button"
+            (click)="onPauseSale(menuProfile!); closeMenu()"
+          >
+            Pausar venta
+          </button>
+        </li>
+        <li *ngIf="getSaleForProfile(menuProfile!)?.status === 'PAUSED'">
+          <button
+            type="button"
+            (click)="onResumeSale(menuProfile!); closeMenu()"
+          >
+            Reanudar venta
+          </button>
+        </li>
+        <li *ngIf="getSaleForProfile(menuProfile!)?.status === 'PAUSED'">
+          <button
+            type="button"
+            (click)="onRefundSale(menuProfile!); closeMenu()"
+          >
+            Reembolsar
+          </button>
+        </li>
+        <ng-container *ngIf="accountLabels.length > 0">
+          <div class="my-1 mx-2 h-px bg-base-200"></div>
+          <li class="menu-title">
+            <span class="text-xs opacity-40">Etiqueta</span>
+          </li>
+          <li>
+            <button
+              type="button"
+              [class.font-semibold]="!menuProfile!.labelId"
+              (click)="onAssignLabel(menuProfile!, null); closeMenu()"
+            >
+              <span class="w-3 h-3 rounded-full bg-base-300 shrink-0"></span>
+              Sin etiqueta
+            </button>
+          </li>
+          <li *ngFor="let l of accountLabels">
+            <button
+              type="button"
+              [class.font-semibold]="menuProfile!.labelId === l.id"
+              (click)="onAssignLabel(menuProfile!, l.id); closeMenu()"
+            >
+              <span
+                class="w-3 h-3 rounded-full shrink-0"
+                [style.background-color]="l.color"
+              ></span>
+              {{ l.name }}
+            </button>
+          </li>
+        </ng-container>
+      </ng-container>
+    </ul>
+  </div>
+</div>

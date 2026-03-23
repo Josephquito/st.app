@@ -2,13 +2,13 @@ import { Component, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { UsersService, UserDTO } from '../../services/users.service';
 import { AuthService } from '../../services/auth.service';
+import { parseApiError } from '../../utils/error.utils';
 
 import { CreateUserModal } from '../../modales/users/create-user/create-user.modal';
 import { EditUserModal } from '../../modales/users/edit-user/edit-user.modal';
-import { DeleteUserModal } from '../../modales/users/delete-user/delete-user.modal';
 import { EditUserPermissionsModal } from '../../modales/users/edit-user-permissions/edit-user-permissions.modal';
-
-type UserStatus = 'ACTIVE' | 'INACTIVE' | 'BLOCKED';
+import { StatusPipe } from '../../pipes/status.pipe';
+import { ConfirmActionModal } from '../../modales/confirmacion/confirm-action/confirm-action.modal';
 
 @Component({
   selector: 'app-users-page',
@@ -17,8 +17,9 @@ type UserStatus = 'ACTIVE' | 'INACTIVE' | 'BLOCKED';
     CommonModule,
     CreateUserModal,
     EditUserModal,
-    DeleteUserModal,
     EditUserPermissionsModal,
+    StatusPipe,
+    ConfirmActionModal,
   ],
   templateUrl: './users.page.html',
   styleUrls: ['./users.page.css'],
@@ -29,22 +30,22 @@ export class UsersPage {
 
   loading = false;
   loadingRowId: number | null = null;
-
   errorMessage = '';
   users: UserDTO[] = [];
 
-  // Modales
   createOpen = false;
   editOpen = false;
   deleteOpen = false;
+  permissionsOpen = false;
 
   selected: UserDTO | null = null;
 
-  // ✅ menú contextual FIXED (no lo recorta ningún overflow)
   menuOpen = false;
   menuUser: UserDTO | null = null;
   menuX = 0;
   menuY = 0;
+
+  loadingDelete = false;
 
   get canCreate() {
     return this.auth.hasPermission('USERS:CREATE');
@@ -64,12 +65,11 @@ export class UsersPage {
   }
 
   // ======================
-  // Menu
+  // Menú contextual
   // ======================
   toggleMenu(u: UserDTO, ev: MouseEvent) {
     ev.stopPropagation();
 
-    // si vuelves a tocar el mismo usuario, cierra
     if (this.menuOpen && this.menuUser?.id === u.id) {
       this.closeMenu();
       return;
@@ -78,11 +78,9 @@ export class UsersPage {
     const btn = ev.currentTarget as HTMLElement | null;
     if (btn) {
       const rect = btn.getBoundingClientRect();
-      // aparece debajo del botón, alineado a la derecha
       this.menuX = rect.right;
       this.menuY = rect.bottom + 8;
     } else {
-      // fallback
       this.menuX = ev.clientX;
       this.menuY = ev.clientY;
     }
@@ -103,7 +101,6 @@ export class UsersPage {
 
   @HostListener('window:scroll')
   onScroll() {
-    // al hacer scroll, mejor cerrar para no quedar flotando raro
     this.closeMenu();
   }
 
@@ -126,108 +123,49 @@ export class UsersPage {
     try {
       this.users = await this.api.findAll();
     } catch (e: any) {
-      this.errorMessage = this.normalizeMsg(e);
+      this.errorMessage = parseApiError(e);
     } finally {
       this.loading = false;
     }
   }
 
   // ======================
-  // Create
+  // Modales
   // ======================
   openCreate() {
     if (!this.canCreate) return;
     this.createOpen = true;
   }
 
-  // ======================
-  // Edit
-  // ======================
   openEdit(u: UserDTO) {
     if (!this.canUpdate) return;
     this.selected = u;
     this.editOpen = true;
   }
 
-  // ======================
-  // Delete
-  // ======================
   confirmDelete(u: UserDTO) {
     if (!this.canDelete) return;
-
-    const myId = this.auth.me()?.id;
-    if (myId && u.id === myId) {
+    if (u.id === this.auth.me()?.id) {
       this.errorMessage = 'No puedes eliminar tu propio usuario.';
       return;
     }
-
     this.selected = u;
     this.deleteOpen = true;
+  }
+
+  openPermissions(u: UserDTO) {
+    if (!this.canUpdate) return;
+    this.selected = u;
+    this.permissionsOpen = true;
   }
 
   closeAll() {
     this.createOpen = false;
     this.editOpen = false;
     this.deleteOpen = false;
+    this.permissionsOpen = false;
     this.selected = null;
     this.closeMenu();
-  }
-
-  async onCreated() {
-    this.closeAll();
-    await this.refresh();
-  }
-
-  async onUpdated() {
-    this.closeAll();
-    await this.refresh();
-  }
-
-  async onDeleted() {
-    this.closeAll();
-    await this.refresh();
-  }
-
-  // ======================
-  // Status toggle
-  // ======================
-  async toggleStatus(u: UserDTO) {
-    if (!this.canUpdate) return;
-
-    const myId = this.auth.me()?.id;
-    if (myId && u.id === myId) {
-      this.errorMessage = 'No puedes cambiar tu propio status.';
-      return;
-    }
-
-    const nextStatus: UserStatus =
-      u.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-
-    this.loadingRowId = u.id;
-    this.errorMessage = '';
-    try {
-      await this.api.update(u.id, { status: nextStatus } as any);
-      await this.refresh();
-    } catch (e: any) {
-      this.errorMessage = this.normalizeMsg(e);
-    } finally {
-      this.loadingRowId = null;
-    }
-  }
-
-  private normalizeMsg(err: any): string {
-    const msg = err?.error?.message;
-    if (typeof msg === 'string') return msg;
-    if (Array.isArray(msg)) return msg.join(', ');
-    return 'Error';
-  }
-
-  permissionsOpen = false;
-
-  openPermissions(u: UserDTO) {
-    if (!this.canUpdate) return; // tu back pide USERS:UPDATE para set/add/remove
-    this.selected = u;
-    this.permissionsOpen = true;
   }
 
   closePermissions() {
@@ -236,8 +174,57 @@ export class UsersPage {
     this.closeMenu();
   }
 
+  async onCreated() {
+    this.closeAll();
+    await this.refresh();
+  }
+  async onUpdated() {
+    this.closeAll();
+    await this.refresh();
+  }
+  async onDeleted() {
+    this.closeAll();
+    await this.refresh();
+  }
   async onPermissionsUpdated() {
     this.closePermissions();
     await this.refresh();
+  }
+
+  // ======================
+  // Toggle status
+  // ======================
+  async toggleStatus(u: UserDTO) {
+    if (!this.canUpdate) return;
+    if (u.id === this.auth.me()?.id) {
+      this.errorMessage = 'No puedes cambiar tu propio status.';
+      return;
+    }
+
+    const nextStatus = u.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    this.loadingRowId = u.id;
+    this.errorMessage = '';
+
+    try {
+      await this.api.update(u.id, { status: nextStatus });
+      await this.refresh();
+    } catch (e: any) {
+      this.errorMessage = parseApiError(e);
+    } finally {
+      this.loadingRowId = null;
+    }
+  }
+
+  async onDeleteConfirm() {
+    if (!this.selected) return;
+    this.loadingDelete = true;
+    try {
+      await this.api.remove(this.selected.id); // ← this.api no this.usersApi
+      this.onDeleted();
+    } catch (e: any) {
+      this.errorMessage = parseApiError(e);
+    } finally {
+      this.loadingDelete = false;
+    }
   }
 }

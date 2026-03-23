@@ -1,10 +1,10 @@
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-
 import {
   StreamingPlatformsService,
   StreamingPlatformDTO,
 } from '../../../services/streaming-platforms.service';
+import { parseApiError } from '../../../utils/error.utils';
 
 @Component({
   selector: 'app-delete-platform-modal',
@@ -30,17 +30,16 @@ export class DeletePlatformModal {
   }
 
   async submit() {
-    if (!this.platform) return;
+    if (!this.platform || this.loading) return;
 
-    this.errorMessage = '';
     this.loading = true;
+    this.errorMessage = '';
     try {
       await this.api.remove(this.platform.id);
       this.deleted.emit();
       this.onClose();
     } catch (e: any) {
-      this.errorMessage =
-        e?.error?.message ?? 'No se pudo eliminar la plataforma.';
+      this.errorMessage = parseApiError(e);
     } finally {
       this.loading = false;
     }

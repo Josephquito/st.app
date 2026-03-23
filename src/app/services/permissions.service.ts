@@ -17,18 +17,18 @@ export type PermissionDTO = {
 @Injectable({ providedIn: 'root' })
 export class PermissionsApi {
   private http = inject(HttpClient);
-  private baseUrl = environment.apiUrl.replace(/\/+$/, ''); // quita slash final
+  private base = environment.apiUrl.replace(/\/+$/, '');
 
   findAll(): Promise<PermissionDTO[]> {
     return firstValueFrom(
-      this.http.get<PermissionDTO[]>(`${this.baseUrl}/permissions`),
+      this.http.get<PermissionDTO[]>(`${this.base}/permissions`),
     );
   }
 
   listUserPermissions(userId: number): Promise<PermissionDTO[]> {
     return firstValueFrom(
       this.http.get<PermissionDTO[]>(
-        `${this.baseUrl}/users/${userId}/permissions`,
+        `${this.base}/users/${userId}/permissions`,
       ),
     );
   }
@@ -39,7 +39,7 @@ export class PermissionsApi {
   ): Promise<{ ok: boolean; userId: number; permissions: number[] }> {
     return firstValueFrom(
       this.http.post<{ ok: boolean; userId: number; permissions: number[] }>(
-        `${this.baseUrl}/users/${userId}/permissions/set`,
+        `${this.base}/users/${userId}/permissions/set`,
         { permissionIds },
       ),
     );
@@ -51,7 +51,7 @@ export class PermissionsApi {
   ): Promise<{ ok: boolean; added: number[] }> {
     return firstValueFrom(
       this.http.post<{ ok: boolean; added: number[] }>(
-        `${this.baseUrl}/users/${userId}/permissions/add`,
+        `${this.base}/users/${userId}/permissions/add`,
         { permissionIds },
       ),
     );
@@ -62,9 +62,9 @@ export class PermissionsApi {
     permissionIds: number[],
   ): Promise<{ ok: boolean; removed: number[] }> {
     return firstValueFrom(
-      this.http.post<{ ok: boolean; removed: number[] }>(
-        `${this.baseUrl}/users/${userId}/permissions/remove`,
-        { permissionIds },
+      this.http.delete<{ ok: boolean; removed: number[] }>(
+        `${this.base}/users/${userId}/permissions/remove`,
+        { body: { permissionIds } },
       ),
     );
   }

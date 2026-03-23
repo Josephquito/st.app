@@ -1,0 +1,243 @@
+<div class="page">
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <h1 class="title">Importar cuentas</h1>
+      <p class="subtitle">
+        Sube un CSV con cuentas, perfiles, ventas, clientes y proveedores.
+      </p>
+    </div>
+    <button
+      class="btn btn-ghost btn-sm"
+      type="button"
+      (click)="onDownloadTemplate()"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="h-4 w-4 mr-1"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+        />
+      </svg>
+      Descargar plantilla
+    </button>
+  </div>
+
+  <!-- Upload card -->
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body">
+      <div class="flex items-end gap-4">
+        <div class="form-control flex-1">
+          <label class="label">
+            <span class="label-text font-medium">Archivo CSV</span>
+            <span class="label-text-alt text-base-content/40">
+              Una fila por perfil · columna platform para separar plataformas
+            </span>
+          </label>
+          <input
+            type="file"
+            accept=".csv"
+            class="file-input file-input-bordered w-full"
+            [disabled]="loading"
+            (change)="onFileChange($event)"
+          />
+        </div>
+
+        <button
+          class="btn btn-neutral"
+          type="button"
+          [disabled]="!file || loading || !canImport"
+          (click)="onImport()"
+        >
+          <span
+            *ngIf="loading"
+            class="loading loading-spinner loading-sm"
+          ></span>
+          {{ loading ? 'Importando...' : 'Importar' }}
+        </button>
+
+        <button
+          *ngIf="loading"
+          class="btn btn-ghost text-error"
+          type="button"
+          (click)="onCancel()"
+        >
+          Cancelar
+        </button>
+
+        <button
+          *ngIf="hasLines && !loading"
+          class="btn btn-ghost"
+          type="button"
+          (click)="onReset()"
+        >
+          Limpiar
+        </button>
+      </div>
+
+      <!-- Info archivo -->
+      <p
+        *ngIf="file && !loading && !hasLines"
+        class="text-xs text-base-content/40 mt-2"
+      >
+        Archivo listo:
+        <span class="font-mono">{{ file.name }}</span>
+        ({{ (file.size / 1024).toFixed(1) }} KB)
+      </p>
+
+      <!-- Error -->
+      <div *ngIf="errorMessage" class="alert alert-error mt-3">
+        <span>{{ errorMessage }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resumen — solo cuando terminó -->
+  <div *ngIf="!loading && totalFinalGroups > 0" class="grid grid-cols-3 gap-4">
+    <div
+      class="card border shadow-sm"
+      [ngClass]="totalFinal > 0 ? 'bg-success/10 border-success/20' : 'bg-base-100 border-base-200'"
+    >
+      <div class="card-body py-4 gap-1">
+        <div
+          class="text-3xl font-bold"
+          [ngClass]="totalFinal > 0 ? 'text-success' : 'text-base-content/20'"
+        >
+          {{ totalFinal }}
+        </div>
+        <div
+          class="text-sm"
+          [ngClass]="totalFinal > 0 ? 'text-success/70' : 'text-base-content/30'"
+        >
+          Cuentas importadas
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="card border shadow-sm"
+      [ngClass]="totalWarnings > 0 ? 'bg-warning/10 border-warning/20' : 'bg-base-100 border-base-200'"
+    >
+      <div class="card-body py-4 gap-1">
+        <div
+          class="text-3xl font-bold"
+          [ngClass]="totalWarnings > 0 ? 'text-warning' : 'text-base-content/20'"
+        >
+          {{ totalWarnings }}
+        </div>
+        <div
+          class="text-sm"
+          [ngClass]="totalWarnings > 0 ? 'text-warning/70' : 'text-base-content/30'"
+        >
+          Perfiles sin cliente
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="card border shadow-sm"
+      [ngClass]="totalSkipped > 0 ? 'bg-error/10 border-error/20' : 'bg-base-100 border-base-200'"
+    >
+      <div class="card-body py-4 gap-1">
+        <div
+          class="text-3xl font-bold"
+          [ngClass]="totalSkipped > 0 ? 'text-error' : 'text-base-content/20'"
+        >
+          {{ totalSkipped }}
+        </div>
+        <div
+          class="text-sm"
+          [ngClass]="totalSkipped > 0 ? 'text-error/70' : 'text-base-content/30'"
+        >
+          Cuentas omitidas
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Consola en vivo -->
+  <div *ngIf="hasLines || loading" class="card bg-base-100 shadow-sm">
+    <div class="card-body p-0">
+      <!-- Header consola -->
+      <div
+        class="flex items-center justify-between px-5 py-3 border-b border-base-200"
+      >
+        <div class="flex items-center gap-3">
+          <span class="font-bold text-sm">Consola</span>
+          <span
+            *ngIf="loading"
+            class="loading loading-spinner loading-xs text-base-content/40"
+          ></span>
+          <span
+            *ngIf="loading && totalFinalGroups > 0"
+            class="text-xs text-base-content/40"
+          >
+            {{ totalFinal }} / {{ totalFinalGroups }}
+          </span>
+          <span
+            *ngIf="!loading && totalFinalGroups > 0"
+            class="badge badge-success badge-sm"
+          >
+            Completado
+          </span>
+        </div>
+        <span class="text-xs text-base-content/30 font-mono">
+          {{ liveLines.length }} línea{{ liveLines.length !== 1 ? 's' : '' }}
+        </span>
+      </div>
+
+      <!-- Terminal -->
+      <div class="console" #consoleEl>
+        <ng-container *ngFor="let line of liveLines">
+          <!-- progress -->
+          <div *ngIf="line.type === 'progress'" class="console-line-ok">
+            ✓ <span class="font-semibold">{{ line.email }}</span>
+            <span class="opacity-50"> · {{ line.platform }}</span>
+          </div>
+
+          <!-- warning -->
+          <div *ngIf="line.type === 'warning'" class="console-line-warn">
+            ⚠ {{ line.email }} · perfil #{{ line.profileNo }}
+            <span class="opacity-60">
+              → {{ line.message | slice:line.message.indexOf('→')+2 }}</span
+            >
+          </div>
+
+          <!-- skipped -->
+          <div *ngIf="line.type === 'skipped'" class="console-line-error">
+            ✕ <span class="font-semibold">{{ line.email }}</span>
+            <span class="opacity-60">
+              → {{ line.message | slice:line.message.indexOf('→')+2 }}</span
+            >
+          </div>
+
+          <!-- error -->
+          <div *ngIf="line.type === 'error'" class="console-line-error">
+            ✕ Error: {{ line.message }}
+          </div>
+
+          <!-- done -->
+          <div
+            *ngIf="line.type === 'done'"
+            class="console-line-dim"
+            style="padding-top: 12px"
+          >
+            ── {{ line.message }} ──
+          </div>
+        </ng-container>
+
+        <!-- Cursor parpadeante mientras carga -->
+        <div *ngIf="loading" class="console-line-dim" style="padding-top: 2px">
+          <span class="animate-pulse">▋</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,56 @@
+<dialog class="modal" [class.modal-open]="open">
+  <div class="modal-box max-w-sm">
+    <h3 class="font-bold text-lg">Cambiar estado</h3>
+    <p class="text-sm opacity-70 mt-1">
+      {{ account?.platform?.name || '—' }} · {{ account?.email || '—' }}
+    </p>
+
+    <div *ngIf="errorMessage" class="alert alert-error mt-3">
+      <span>{{ errorMessage }}</span>
+    </div>
+
+    <div class="mt-4">
+      <label class="form-control">
+        <select
+          class="select select-bordered w-full"
+          [(ngModel)]="selectedStatus"
+        >
+          <option
+            *ngFor="let opt of statusOptions"
+            [value]="opt.value"
+            [disabled]="opt.value === account?.status"
+          >
+            {{ opt.label }}
+            <ng-container *ngIf="opt.value === account?.status">
+              (actual)</ng-container
+            >
+          </option>
+        </select>
+      </label>
+    </div>
+
+    <div class="modal-action">
+      <button
+        class="btn btn-ghost"
+        type="button"
+        (click)="onClose()"
+        [disabled]="loading"
+      >
+        Cancelar
+      </button>
+      <button
+        class="btn btn-neutral"
+        type="button"
+        (click)="submit()"
+        [disabled]="loading || !selectedStatus || selectedStatus === account?.status"
+      >
+        <span *ngIf="loading" class="loading loading-spinner loading-sm"></span>
+        Guardar
+      </button>
+    </div>
+  </div>
+
+  <form method="dialog" class="modal-backdrop">
+    <button type="button" (click)="onClose()">close</button>
+  </form>
+</dialog>

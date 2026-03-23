@@ -1,0 +1,88 @@
+<dialog class="modal" [class.modal-open]="open">
+  <div class="modal-box max-w-lg">
+    <h3 class="font-bold text-lg">Etiquetas de {{ platform?.name || '—' }}</h3>
+
+    <div *ngIf="errorMessage" class="alert alert-error mt-3">
+      <span>{{ errorMessage }}</span>
+    </div>
+
+    <!-- Loading -->
+    <div *ngIf="loading" class="flex justify-center py-6">
+      <span class="loading loading-spinner loading-md"></span>
+    </div>
+
+    <!-- Lista de etiquetas -->
+    <div *ngIf="!loading" class="mt-4 flex flex-col gap-2">
+      <div
+        *ngFor="let l of labels"
+        class="flex items-center justify-between px-3 py-2 rounded-lg border border-base-200 bg-base-100"
+      >
+        <div class="flex items-center gap-3">
+          <span
+            class="w-4 h-4 rounded-full shrink-0"
+            [style.background-color]="l.color"
+          ></span>
+          <span class="text-sm font-medium">{{ l.name }}</span>
+          <span class="text-xs opacity-40">
+            {{ l._count?.profiles ?? 0 }} perfiles
+          </span>
+        </div>
+        <div class="flex items-center gap-1">
+          <button
+            type="button"
+            class="btn btn-ghost btn-xs"
+            (click)="openEdit(l)"
+          >
+            Editar
+          </button>
+          <button
+            type="button"
+            class="btn btn-ghost btn-xs text-error"
+            (click)="confirmDelete(l)"
+          >
+            Eliminar
+          </button>
+        </div>
+      </div>
+
+      <div
+        *ngIf="labels.length === 0"
+        class="text-center text-sm opacity-40 py-6 border border-dashed border-base-300 rounded-lg"
+      >
+        No hay etiquetas para esta plataforma.
+      </div>
+    </div>
+
+    <div class="modal-action justify-between">
+      <button type="button" class="btn btn-neutral" (click)="openCreate()">
+        + Nueva etiqueta
+      </button>
+      <button type="button" class="btn" (click)="onClose()">Cerrar</button>
+    </div>
+  </div>
+
+  <form method="dialog" class="modal-backdrop">
+    <button type="button" (click)="onClose()">close</button>
+  </form>
+</dialog>
+
+<!-- Modal crear/editar etiqueta -->
+<app-create-label-modal
+  [open]="createOpen"
+  [platform]="platform"
+  [label]="selectedLabel"
+  (close)="createOpen = false; selectedLabel = null"
+  (saved)="onSaved()"
+/>
+
+<!-- Confirm eliminar -->
+<app-confirm-action-modal
+  [open]="confirmDeleteOpen"
+  title="¿Eliminar etiqueta?"
+  [message]="'¿Seguro que quieres eliminar <b>' + labelToDelete?.name + '</b>? Los perfiles que la tengan asignada quedarán sin etiqueta.'"
+  confirmLabel="Eliminar"
+  [danger]="true"
+  [loading]="loadingDelete"
+  (confirm)="onDeleteConfirm()"
+  (cancel)="confirmDeleteOpen = false; labelToDelete = null"
+/>

@@ -12,7 +12,7 @@
         <input
           class="input input-bordered w-full"
           [(ngModel)]="name"
-          placeholder="Ej: Juan Pérez"
+          [placeholder]="loadingSuggestion ? 'Cargando sugerencia...' : (suggestedName ? 'Sugerencia: ' + suggestedName : 'Ej: Cliente 001')"
         />
       </label>
 
@@ -29,10 +29,20 @@
         <div class="label">
           <span class="label-text">Origen (opcional)</span>
         </div>
+        <select class="select select-bordered w-full" [(ngModel)]="source">
+          <option value="">— Sin origen —</option>
+          <option *ngFor="let opt of sourceOptions" [value]="opt.value">
+            {{ opt.label }}
+          </option>
+        </select>
+      </label>
+
+      <label *ngIf="needsSourceNote" class="form-control w-full">
+        <div class="label"><span class="label-text">¿Cuál origen?</span></div>
         <input
           class="input input-bordered w-full"
-          [(ngModel)]="source"
-          placeholder="Ej: Facebook, referido, etc."
+          [(ngModel)]="sourceNote"
+          placeholder="Ej: TikTok, feria, etc."
         />
       </label>
     </div>
@@ -46,7 +56,6 @@
       >
         Cancelar
       </button>
-
       <button
         class="btn btn-neutral"
         type="button"

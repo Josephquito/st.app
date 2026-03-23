@@ -1,4 +1,11 @@
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  OnChanges,
+  Output,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -11,15 +18,17 @@ import {
   SupplierDTO,
 } from '../../../services/suppliers.service';
 import { StreamingPlatformDTO } from '../../../services/streaming-platforms.service';
+import { CreateSupplierModal } from '../../suppliers/create-supplier/create-supplier.modal';
+import { parseApiError } from '../../../utils/error.utils';
 
 @Component({
   selector: 'app-edit-account-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CreateSupplierModal],
   templateUrl: './edit-account.modal.html',
-  styleUrls: ['../accounts.modal.css'], // ✅ comparte CSS (ajusta ruta si aplica)
+  styleUrls: ['../accounts.modal.css'],
 })
-export class EditAccountModal {
+export class EditAccountModal implements OnChanges {
   api = inject(StreamingAccountsService);
   suppliersApi = inject(SuppliersService);
 
@@ -39,34 +48,36 @@ export class EditAccountModal {
   platformId: number | null = null;
   supplierId: number | null = null;
 
-  // ✅ typeahead proveedor (igual que create)
   supplierQuery = '';
   supplierDropdownOpen = false;
   supplierMatches: SupplierDTO[] = [];
-  creatingSupplier = false;
+  createSupplierOpen = false;
 
   email = '';
   password = '';
   profilesTotal = 0;
-
   purchaseDate = '';
   cutoffDate = '';
-  totalCost = '0';
   notes = '';
-
   status: 'ACTIVE' | 'INACTIVE' = 'ACTIVE';
 
-  // ✅ Periodo para calcular cutoffDate (igual que create)
-  periodMonths: 1 | 3 | 6 | 12 | null = 1;
+  periodMonths: 1 | 3 | 6 | 12 | null = null;
   periodDays: number | null = null;
 
+  correctCostValue = '';
+  loadingCorrectCost = false;
+  correctCostError = '';
+  correctCostSuccess = false;
+
+  // =========================
+  // Lifecycle
+  // =========================
   async ngOnChanges() {
     this.errorMessage = '';
-
     if (this.open) {
+      this.suppliersLoading = true;
       await this.loadSuppliers();
     }
-
     if (this.open && this.account) {
       this.hydrateFromAccount(this.account);
       this.refreshSupplierMatches();
@@ -76,36 +87,32 @@ export class EditAccountModal {
   private hydrateFromAccount(a: StreamingAccountDTO) {
     this.platformId = a.platformId ?? (a as any)?.platform?.id ?? null;
     this.supplierId = a.supplierId ?? (a as any)?.supplier?.id ?? null;
-
     this.email = a.email ?? '';
     this.password = (a as any)?.password ?? '';
     this.profilesTotal = a.profilesTotal ?? 0;
-
     this.purchaseDate = this.toDateInput((a as any)?.purchaseDate);
     this.cutoffDate = this.toDateInput((a as any)?.cutoffDate);
-
-    this.totalCost = String((a as any)?.totalCost ?? '0');
     this.notes = (a as any)?.notes ?? '';
     this.status = ((a as any)?.status ?? 'ACTIVE') as any;
+    this.periodMonths = null;
+    this.periodDays = null;
 
-    // ✅ pinta el label del proveedor en el input
     if (this.supplierId) {
       this.supplierQuery = this.getSupplierLabelById(this.supplierId);
     } else {
       this.supplierQuery = '';
     }
 
-    // ✅ si ya tengo purchase + cutoff y quiero “adivinar” periodo, lo dejo simple:
-    // por defecto 1 mes si no hay nada.
-    if (!this.purchaseDate) {
-      this.purchaseDate = this.todayISO();
-    }
+    if (!this.purchaseDate) this.purchaseDate = this.todayISO();
 
-    // si no quieres tocar el cutoff existente, NO recalcules automático aquí.
-    // Si sí quieres recalcular al abrir, descomenta:
-    // this.recalcCutoffDate();
+    this.correctCostValue = '';
+    this.correctCostError = '';
+    this.correctCostSuccess = false;
   }
 
+  // =========================
+  // Suppliers
+  // =========================
   async loadSuppliers() {
     this.suppliersLoading = true;
     try {
@@ -117,20 +124,16 @@ export class EditAccountModal {
     }
   }
 
-  // ====== Supplier typeahead (igual que create) ======
   onSupplierQueryChange() {
     this.supplierDropdownOpen = true;
     this.refreshSupplierMatches();
-
     const q = this.supplierQuery.trim().toLowerCase();
     if (this.supplierId) {
       const current = this.suppliers.find((x) => x.id === this.supplierId);
       const label = current
         ? `${current.name ?? ''} ${current.contact ?? ''}`.trim().toLowerCase()
         : '';
-      if (q && !label.includes(q)) {
-        this.supplierId = null;
-      }
+      if (q && !label.includes(q)) this.supplierId = null;
     }
   }
 
@@ -140,12 +143,10 @@ export class EditAccountModal {
       this.supplierMatches = [];
       return;
     }
-
     this.supplierMatches = this.suppliers
-      .filter((s) => {
-        const hay = `${s.name ?? ''} ${s.contact ?? ''}`.toLowerCase();
-        return hay.includes(q);
-      })
+      .filter((s) =>
+        `${s.name ?? ''} ${s.contact ?? ''}`.toLowerCase().includes(q),
+      )
       .slice(0, 8);
   }
 
@@ -162,70 +163,34 @@ export class EditAccountModal {
     }, 120);
   }
 
-  canCreateSupplierFromQuery(): boolean {
-    const q = this.supplierQuery.trim();
-    if (q.length < 2) return false;
-
-    const exact = this.suppliers.some((s) => {
-      const name = (s.name ?? '').trim().toLowerCase();
-      const contact = (s.contact ?? '').trim().toLowerCase();
-      const qq = q.toLowerCase();
-      return name === qq || contact === qq;
-    });
-
-    return !exact;
+  openCreateSupplier() {
+    this.supplierDropdownOpen = false;
+    this.createSupplierOpen = true;
   }
 
-  async createSupplierFromQuery() {
-    const q = this.supplierQuery.trim();
-    if (q.length < 2 || this.creatingSupplier) return;
-
-    this.creatingSupplier = true;
-    this.errorMessage = '';
-
-    try {
-      const created = await this.suppliersApi.create({ name: q, contact: q });
-
-      if (created?.id) {
-        this.suppliers = [created, ...this.suppliers];
-        this.selectSupplier(created);
-      } else {
-        await this.loadSuppliers();
-        const found = this.suppliers.find(
-          (s) =>
-            (s.name ?? '').trim().toLowerCase() === q.toLowerCase() ||
-            (s.contact ?? '').trim().toLowerCase() === q.toLowerCase(),
-        );
-        if (found) this.selectSupplier(found);
-      }
-    } catch (e: any) {
-      this.errorMessage = e?.error?.message ?? 'No se pudo crear el proveedor.';
-    } finally {
-      this.creatingSupplier = false;
+  async onSupplierCreated() {
+    this.createSupplierOpen = false;
+    await this.loadSuppliers();
+    const q = this.supplierQuery.trim().toLowerCase();
+    if (q) {
+      const found = this.suppliers.find(
+        (s) =>
+          (s.name ?? '').toLowerCase().includes(q) ||
+          (s.contact ?? '').toLowerCase().includes(q),
+      );
+      if (found) this.selectSupplier(found);
     }
   }
 
   onSupplierEnter(event: Event) {
-    const keyboardEvent = event as KeyboardEvent;
-    keyboardEvent.preventDefault();
-
-    if (this.creatingSupplier || this.suppliersLoading) return;
-
-    const q = this.supplierQuery.trim();
-
+    (event as KeyboardEvent).preventDefault();
+    if (this.suppliersLoading) return;
     if (this.supplierId) {
       this.supplierDropdownOpen = false;
       return;
     }
-
-    if (this.supplierMatches.length > 0) {
+    if (this.supplierMatches.length > 0)
       this.selectSupplier(this.supplierMatches[0]);
-      return;
-    }
-
-    if (q.length >= 2 && this.canCreateSupplierFromQuery()) {
-      this.createSupplierFromQuery();
-    }
   }
 
   trackSupplier = (_: number, s: SupplierDTO) => s.id;
@@ -242,62 +207,62 @@ export class EditAccountModal {
     return s ? this.getSupplierLabel(s) : '';
   }
 
-  // ====== Total cost (igual que create) ======
-  onTotalCostChange(value: string) {
+  // =========================
+  // Corrección de costo
+  // =========================
+  onCorrectCostChange(value: string) {
     if (value == null) {
-      this.totalCost = '';
+      this.correctCostValue = '';
       return;
     }
-
-    let sanitized = value.replace(/[^0-9.,]/g, '');
-
-    if (sanitized.includes(',') && sanitized.includes('.')) {
-      sanitized = sanitized.replace(/\./g, '').replace(',', '.');
-    }
-
-    if (sanitized.includes(',') && !sanitized.includes('.')) {
-      sanitized = sanitized.replace(',', '.');
-    }
-
-    const parts = sanitized.split('.');
-    if (parts.length > 2) {
-      sanitized = parts.shift()! + '.' + parts.join('');
-    }
-
-    this.totalCost = sanitized;
+    let s = value.replace(/[^0-9.,]/g, '');
+    if (s.includes(',') && s.includes('.'))
+      s = s.replace(/\./g, '').replace(',', '.');
+    if (s.includes(',') && !s.includes('.')) s = s.replace(',', '.');
+    const parts = s.split('.');
+    if (parts.length > 2) s = parts.shift()! + '.' + parts.join('');
+    this.correctCostValue = s;
   }
 
-  // ====== Periodo -> cutoffDate (igual que create) ======
-  onPurchaseDateChange(value: string) {
-    this.purchaseDate = value;
-    this.recalcCutoffDate();
+  async submitCorrectCost() {
+    if (!this.account || !this.correctCostValue) return;
+    this.correctCostError = '';
+    this.correctCostSuccess = false;
+    this.loadingCorrectCost = true;
+    try {
+      await this.api.correctCost(this.account.id, {
+        totalCost: this.correctCostValue,
+      });
+      this.correctCostSuccess = true;
+      this.correctCostValue = '';
+      this.updated.emit();
+    } catch (e: any) {
+      this.correctCostError = parseApiError(e);
+    } finally {
+      this.loadingCorrectCost = false;
+    }
   }
 
+  // =========================
+  // Fechas y período
+  // =========================
   onPeriodMonthsChange(value: any) {
     const v = value === null ? null : Number(value);
-
     this.periodMonths =
       v === 1 || v === 3 || v === 6 || v === 12 ? (v as 1 | 3 | 6 | 12) : null;
-
-    if (this.periodMonths !== null) {
-      this.periodDays = null;
-    }
-
+    if (this.periodMonths !== null) this.periodDays = null;
     this.recalcCutoffDate();
   }
 
   onPeriodDaysChange(value: any) {
     const raw = value === '' || value === null ? null : Number(value);
-
     if (!Number.isFinite(raw as number) || (raw as number) < 1) {
       this.periodDays = null;
       this.recalcCutoffDate();
       return;
     }
-
     this.periodDays = raw as number;
     this.periodMonths = null;
-
     this.recalcCutoffDate();
   }
 
@@ -305,32 +270,28 @@ export class EditAccountModal {
     if (!dateStr) return null;
     const [y, m, d] = dateStr.split('-').map(Number);
     if (!y || !m || !d) return null;
-    return new Date(y, m - 1, d);
+    return new Date(Date.UTC(y, m - 1, d)); // ← UTC
   }
 
   private toISODate(d: Date): string {
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
   }
 
   private addDays(base: Date, days: number): Date {
     const d = new Date(base);
-    d.setDate(d.getDate() + days);
+    d.setUTCDate(d.getUTCDate() + days);
     return d;
   }
 
   private addMonths(base: Date, months: number): Date {
     const d = new Date(base);
-    const day = d.getDate();
-
-    d.setDate(1);
-    d.setMonth(d.getMonth() + months);
-
-    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-    d.setDate(Math.min(day, lastDay));
-
+    const day = d.getUTCDate();
+    d.setUTCDate(1);
+    d.setUTCMonth(d.getUTCMonth() + months);
+    const lastDay = new Date(
+      Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0),
+    ).getUTCDate();
+    d.setUTCDate(Math.min(day, lastDay));
     return d;
   }
 
@@ -340,72 +301,67 @@ export class EditAccountModal {
       this.cutoffDate = '';
       return;
     }
-
     const days = Number(this.periodDays);
     if (Number.isFinite(days) && days >= 1) {
       this.cutoffDate = this.toISODate(this.addDays(base, days));
       return;
     }
-
     if (this.periodMonths !== null) {
       this.cutoffDate = this.toISODate(this.addMonths(base, this.periodMonths));
       return;
     }
-
     this.cutoffDate = '';
   }
 
-  // ====== helpers ======
-  private toDateInput(v: any) {
+  private toDateInput(v: any): string {
     if (!v) return '';
     const d = new Date(v);
     if (Number.isNaN(d.getTime())) return '';
-    return this.toISODate(d);
+    // Usa UTC para evitar desplazamiento de timezone
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
   }
 
   private todayISO(): string {
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
+    return this.toISODate(new Date());
   }
 
+  // =========================
+  // Modal
+  // =========================
   onClose() {
     this.errorMessage = '';
     this.supplierDropdownOpen = false;
     this.supplierMatches = [];
-    this.creatingSupplier = false;
+    this.createSupplierOpen = false;
+    this.correctCostValue = '';
+    this.correctCostError = '';
+    this.correctCostSuccess = false;
+    this.loadingCorrectCost = false;
     this.close.emit();
   }
 
   async submit(): Promise<void> {
     if (!this.account) return;
-
     this.errorMessage = '';
 
     if (!this.platformId) {
       this.errorMessage = 'Selecciona plataforma.';
       return;
     }
-
     if (!this.supplierId) {
       this.errorMessage = 'Selecciona o crea un proveedor.';
       return;
     }
-
     if (!this.email.trim()) {
       this.errorMessage = 'Email requerido.';
       return;
     }
-
     if (!this.purchaseDate) {
-      this.errorMessage = 'purchaseDate requerida.';
+      this.errorMessage = 'Fecha de compra requerida.';
       return;
     }
-
     if (!this.cutoffDate) {
-      this.errorMessage = 'cutoffDate requerida.';
+      this.errorMessage = 'Fecha de corte requerida.';
       return;
     }
 
@@ -416,21 +372,39 @@ export class EditAccountModal {
         supplierId: this.supplierId,
         email: this.email.trim(),
         password: this.password,
-        profilesTotal: this.profilesTotal,
+        // profilesTotal: this.profilesTotal, ← eliminar esta línea
         purchaseDate: this.purchaseDate,
         cutoffDate: this.cutoffDate,
-        totalCost: this.totalCost,
         notes: this.notes?.trim() ? this.notes.trim() : null,
-        status: this.status,
+        ...(this.status !== this.account.status &&
+        (this.status === 'INACTIVE' || this.status === 'ACTIVE')
+          ? { status: this.status }
+          : {}),
       });
-
       this.updated.emit();
       this.onClose();
     } catch (e: any) {
-      this.errorMessage =
-        e?.error?.message ?? 'No se pudo actualizar la cuenta.';
+      this.errorMessage = parseApiError(e);
     } finally {
       this.loading = false;
+    }
+  }
+
+  onPurchaseDateChange() {
+    const base = this.parseISODate(this.purchaseDate);
+    if (!base) return;
+
+    // Si el usuario seleccionó un período explícito, recalcula con ese
+    if (this.periodDays !== null || this.periodMonths !== null) {
+      this.recalcCutoffDate();
+      return;
+    }
+
+    // Si no hay período, recalcula con los durationDays actuales de la cuenta
+    if (this.account?.durationDays) {
+      const end = new Date(base);
+      end.setUTCDate(end.getUTCDate() + this.account.durationDays);
+      this.cutoffDate = this.toISODate(end);
     }
   }
 }

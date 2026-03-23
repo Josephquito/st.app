@@ -5,11 +5,12 @@ import { environment } from '../../environments/environment';
 
 export type StreamingPlatformDTO = {
   id: number;
-  companyId: number;
+  companyId?: number;
   name: string;
   active: boolean;
   createdAt?: string;
   updatedAt?: string;
+  _count?: { accounts: number; streamingSales: number };
 };
 
 export type CreateStreamingPlatformDto = {
@@ -31,6 +32,12 @@ export class StreamingPlatformsService {
     return firstValueFrom(this.http.get<StreamingPlatformDTO[]>(this.base));
   }
 
+  findOne(id: number): Promise<StreamingPlatformDTO> {
+    return firstValueFrom(
+      this.http.get<StreamingPlatformDTO>(`${this.base}/${id}`),
+    );
+  }
+
   create(dto: CreateStreamingPlatformDto): Promise<StreamingPlatformDTO> {
     return firstValueFrom(this.http.post<StreamingPlatformDTO>(this.base, dto));
   }
@@ -44,7 +51,11 @@ export class StreamingPlatformsService {
     );
   }
 
-  remove(id: number): Promise<{ ok: true }> {
-    return firstValueFrom(this.http.delete<{ ok: true }>(`${this.base}/${id}`));
+  remove(id: number): Promise<{ ok: boolean; deletedId: number }> {
+    return firstValueFrom(
+      this.http.delete<{ ok: boolean; deletedId: number }>(
+        `${this.base}/${id}`,
+      ),
+    );
   }
 }

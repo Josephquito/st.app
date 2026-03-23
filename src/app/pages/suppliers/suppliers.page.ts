@@ -1,4 +1,4 @@
-import { Component, HostListener, inject } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 import { AuthService } from '../../services/auth.service';
@@ -6,10 +6,13 @@ import {
   SuppliersService,
   SupplierDTO,
 } from '../../services/suppliers.service';
+import { parseApiError } from '../../utils/error.utils';
 
 import { CreateSupplierModal } from '../../modales/suppliers/create-supplier/create-supplier.modal';
 import { EditSupplierModal } from '../../modales/suppliers/edit-supplier/edit-supplier.modal';
-import { DeleteSupplierModal } from '../../modales/suppliers/delete-supplier/delete-supplier.modal';
+import { AdjustBalanceModal } from '../../modales/suppliers/adjust-balance/adjust-balance.modal';
+import { SupplierDrawerComponent } from '../../components/supplier-drawer/supplier-drawer.component';
+import { ConfirmActionModal } from '../../modales/confirmacion/confirm-action/confirm-action.modal';
 
 @Component({
   selector: 'app-suppliers-page',
@@ -18,65 +21,44 @@ import { DeleteSupplierModal } from '../../modales/suppliers/delete-supplier/del
     CommonModule,
     CreateSupplierModal,
     EditSupplierModal,
-    DeleteSupplierModal,
+    AdjustBalanceModal,
+    SupplierDrawerComponent,
+    ConfirmActionModal,
   ],
   templateUrl: './suppliers.page.html',
   styleUrls: ['./suppliers.page.css'],
 })
-export class SuppliersPage {
+export class SuppliersPage implements OnInit {
   api = inject(SuppliersService);
   auth = inject(AuthService);
 
   loading = false;
-  loadingRowId: number | null = null;
-
   errorMessage = '';
   suppliers: SupplierDTO[] = [];
 
-  // Modales
   createOpen = false;
   editOpen = false;
   deleteOpen = false;
-
+  balanceOpen = false;
   selected: SupplierDTO | null = null;
 
-  // Menú flotante
+  drawerSupplier: SupplierDTO | null = null;
+
   menuOpen = false;
   menuSupplier: SupplierDTO | null = null;
   menuX = 0;
   menuY = 0;
 
-  // Permisos
+  loadingDelete = false;
+
   get canCreate() {
-    return (
-      this.auth.hasPermission?.('SUPPLIERS:CREATE') ??
-      this.has('SUPPLIERS:CREATE')
-    );
-  }
-  get canRead() {
-    return (
-      this.auth.hasPermission?.('SUPPLIERS:READ') ?? this.has('SUPPLIERS:READ')
-    );
+    return this.auth.hasPermission('SUPPLIERS:CREATE');
   }
   get canUpdate() {
-    return (
-      this.auth.hasPermission?.('SUPPLIERS:UPDATE') ??
-      this.has('SUPPLIERS:UPDATE')
-    );
+    return this.auth.hasPermission('SUPPLIERS:UPDATE');
   }
   get canDelete() {
-    return (
-      this.auth.hasPermission?.('SUPPLIERS:DELETE') ??
-      this.has('SUPPLIERS:DELETE')
-    );
-  }
-
-  private has(p: string) {
-    const perms =
-      (this.auth as any)?.currentUser?.permissions ??
-      (this.auth as any)?.user?.permissions ??
-      [];
-    return Array.isArray(perms) && perms.includes(p);
+    return this.auth.hasPermission('SUPPLIERS:DELETE');
   }
 
   ngOnInit() {
@@ -84,51 +66,51 @@ export class SuppliersPage {
   }
 
   async load() {
-    this.errorMessage = '';
-    if (!this.canRead) {
-      this.suppliers = [];
-      this.errorMessage =
-        'No tienes permiso para ver proveedores (SUPPLIERS:READ).';
-      return;
-    }
-
     this.loading = true;
+    this.errorMessage = '';
     try {
       this.suppliers = await this.api.findAll();
     } catch (e: any) {
-      this.errorMessage = e?.error?.message ?? 'No se pudo cargar proveedores.';
+      this.errorMessage = parseApiError(e);
     } finally {
       this.loading = false;
     }
   }
 
-  // Header actions
-  openCreate() {
-    this.selected = null;
-    this.createOpen = true;
-    this.editOpen = false;
-    this.deleteOpen = false;
+  private syncDrawer() {
+    if (!this.drawerSupplier) return;
+    const refreshed = this.suppliers.find(
+      (s) => s.id === this.drawerSupplier!.id,
+    );
+    if (refreshed) this.drawerSupplier = { ...refreshed };
   }
 
-  // Menu
+  // ======================
+  // Drawer
+  // ======================
+  openDrawer(s: SupplierDTO) {
+    this.drawerSupplier = s;
+  }
+
+  closeDrawer() {
+    this.drawerSupplier = null;
+  }
+
+  // ======================
+  // Menú contextual
+  // ======================
   toggleMenu(s: SupplierDTO, ev: MouseEvent) {
     ev.stopPropagation();
-
     if (this.menuOpen && this.menuSupplier?.id === s.id) {
       this.closeMenu();
       return;
     }
-
-    this.menuOpen = true;
-    this.menuSupplier = s;
-
-    // posición del botón
     const target = ev.currentTarget as HTMLElement;
     const rect = target.getBoundingClientRect();
-
-    // menú a la derecha del botón (y lo "jalamos" con translateX(-100%))
     this.menuX = rect.right;
     this.menuY = rect.bottom + 6;
+    this.menuSupplier = s;
+    this.menuOpen = true;
   }
 
   closeMenu() {
@@ -136,40 +118,54 @@ export class SuppliersPage {
     this.menuSupplier = null;
   }
 
-  @HostListener('document:click')
-  onDocClick() {
+  @HostListener('document:click') onDocClick() {
+    this.closeMenu();
+  }
+  @HostListener('window:scroll') onScroll() {
+    this.closeMenu();
+  }
+  @HostListener('window:resize') onResize() {
     this.closeMenu();
   }
 
-  @HostListener('window:scroll')
-  onScroll() {
-    // si scrollean, mejor cerrar para evitar menú “perdido”
-    this.closeMenu();
+  // ======================
+  // Acciones
+  // ======================
+  openCreate() {
+    this.closeAll();
+    this.createOpen = true;
   }
 
-  // Row actions
   openEdit(s: SupplierDTO) {
+    this.closeAll();
     this.selected = s;
     this.editOpen = true;
-    this.createOpen = false;
-    this.deleteOpen = false;
   }
 
   confirmDelete(s: SupplierDTO) {
+    this.closeAll();
     this.selected = s;
     this.deleteOpen = true;
-    this.createOpen = false;
-    this.editOpen = false;
+  }
+
+  openBalance(s: SupplierDTO) {
+    this.closeAll();
+    this.selected = s;
+    this.balanceOpen = true;
   }
 
   closeAll() {
     this.createOpen = false;
     this.editOpen = false;
     this.deleteOpen = false;
+    this.balanceOpen = false;
     this.selected = null;
+    this.closeMenu();
   }
 
-  // Events from modals
+  // ======================
+  // Eventos modales
+  // ======================
   onCreated() {
     this.closeAll();
     this.load();
@@ -177,11 +173,43 @@ export class SuppliersPage {
 
   onUpdated() {
     this.closeAll();
-    this.load();
+    this.load().then(() => this.syncDrawer());
   }
 
   onDeleted() {
     this.closeAll();
     this.load();
+    this.closeDrawer();
+  }
+
+  onBalanceUpdated() {
+    this.closeAll();
+    this.load().then(() => this.syncDrawer());
+  }
+
+  // ✅ Autosave de notas — sin recargar, solo actualiza el array local
+  onNotesUpdated(notes: string, supplierId: number) {
+    // Actualizar el array siempre
+    this.suppliers = this.suppliers.map((s) =>
+      s.id === supplierId ? { ...s, notes } : s,
+    );
+    // Actualizar drawer solo si sigue abierto con el mismo proveedor
+    if (this.drawerSupplier?.id === supplierId) {
+      this.drawerSupplier = { ...this.drawerSupplier, notes };
+    }
+  }
+
+  // Agrega método:
+  async onDeleteConfirm() {
+    if (!this.selected) return;
+    this.loadingDelete = true;
+    try {
+      await this.api.remove(this.selected.id);
+      this.onDeleted();
+    } catch (e: any) {
+      this.errorMessage = parseApiError(e);
+    } finally {
+      this.loadingDelete = false;
+    }
   }
 }

@@ -1,0 +1,87 @@
+<dialog class="modal" [class.modal-open]="open">
+  <div class="modal-box max-w-2xl">
+    <h3 class="font-bold text-lg">Renovar venta</h3>
+    <p class="text-sm opacity-70 mt-1">
+      {{ account?.platform?.name || '—' }} · {{ account?.email || '—' }} ·
+      Perfil #{{ sale?.profile?.profileNo || '—' }}
+    </p>
+    <p class="text-xs opacity-50 mt-0.5">
+      Fecha de renovación: <b>{{ todayLabel }}</b>
+    </p>
+
+    <div *ngIf="errorMessage" class="alert alert-error mt-3">
+      <span>{{ errorMessage }}</span>
+    </div>
+
+    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+      <!-- Precio venta -->
+      <label class="form-control">
+        <div class="label">
+          <span class="label-text">Precio venta (PDV)</span>
+        </div>
+        <input
+          class="input input-bordered"
+          [(ngModel)]="salePrice"
+          placeholder="12,50 o 12.50"
+          inputmode="decimal"
+        />
+      </label>
+
+      <!-- Días asignados -->
+      <div class="form-control">
+        <div class="label"><span class="label-text">Duración</span></div>
+        <div class="flex gap-2 flex-wrap">
+          <select
+            class="select select-bordered"
+            [ngModel]="periodMonths"
+            (ngModelChange)="onPeriodMonthsChange($event)"
+          >
+            <option [ngValue]="null">Meses (opcional)</option>
+            <option [ngValue]="1">1 mes</option>
+            <option [ngValue]="3">3 meses</option>
+            <option [ngValue]="6">6 meses</option>
+            <option [ngValue]="12">12 meses</option>
+          </select>
+          <input
+            class="input input-bordered flex-1 min-w-[120px]"
+            type="number"
+            [ngModel]="periodDays"
+            (ngModelChange)="onPeriodDaysChange($event)"
+            placeholder="Días (ej: 30)"
+            min="1"
+          />
+        </div>
+        <div class="label">
+          <span class="label-text-alt opacity-70">
+            Nuevo corte: <b>{{ cutoffDate || '—' }}</b>
+            <span *ngIf="daysAssigned > 0"> · ({{ daysAssigned }} días)</span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-action">
+      <button
+        class="btn btn-ghost"
+        type="button"
+        (click)="onClose()"
+        [disabled]="loading"
+      >
+        Cancelar
+      </button>
+      <button
+        class="btn btn-neutral"
+        type="button"
+        (click)="submit()"
+        [disabled]="loading"
+      >
+        <span *ngIf="loading" class="loading loading-spinner loading-sm"></span>
+        Renovar
+      </button>
+    </div>
+  </div>
+
+  <form method="dialog" class="modal-backdrop">
+    <button type="button" (click)="onClose()">close</button>
+  </form>
+</dialog>

@@ -117,17 +117,17 @@ export class StreamingSalesReportPage {
     }
 
     try {
-      const [platforms, customers] = await Promise.all([
+      const [platforms, customersRes] = await Promise.all([
         this.platformsApi.findAll(),
-        this.customersApi.findAll(),
+        this.customersApi.findAll({ limit: 200 }),
       ]);
 
       this.platforms = (platforms ?? [])
         .slice()
         .sort((a, b) => a.name.localeCompare(b.name));
-      this.customers = (customers ?? [])
+      this.customers = (customersRes?.data ?? [])
         .slice()
-        .sort((a, b) => a.name.localeCompare(b.name));
+        .sort((a: CustomerDTO, b: CustomerDTO) => a.name.localeCompare(b.name));
     } catch (e: any) {
       this.errorMessage = e?.error?.message ?? 'No se pudo cargar catálogos.';
       return;

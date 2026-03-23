@@ -5,34 +5,39 @@ import { environment } from '../../environments/environment';
 
 export type KardexItemDTO = {
   id: number;
-  companyId: number;
+  companyId?: number;
   platformId: number;
-  unit: 'PROFILE';
+  unit: 'PROFILE_DAY'; // ← actualizado
   stock: number;
-  avgCost: string;
-  platform?: { id: number; name: string };
+  avgCost: string; // costo diario promedio por perfil
+  platform?: { id: number; name: string; active: boolean };
+  updatedAt?: string;
+  _count?: { accounts: number };
 };
 
 export type KardexMovementDTO = {
   id: number;
-  companyId: number;
+  companyId?: number;
   itemId: number;
   type: 'IN' | 'OUT' | 'ADJUST';
   refType: string;
   qty: number;
-  unitCost: string;
+  unitCost: string; // costo diario por perfil
   totalCost: string;
   stockAfter: number;
   avgCostAfter: string;
   createdAt: string;
-
   item?: {
-    id: number;
-    platformId: number;
     platform?: { id: number; name: string };
   };
   account?: { id: number; email: string } | null;
-  sale?: { id: number; salePrice: string } | null;
+  sale?: { id: number; salePrice: string; daysAssigned: number } | null;
+};
+
+export type KardexQueryParams = {
+  platformId?: number;
+  take?: number;
+  skip?: number;
 };
 
 @Injectable({ providedIn: 'root' })
@@ -44,15 +49,32 @@ export class KardexApiService {
     return firstValueFrom(this.http.get<KardexItemDTO[]>(`${this.base}/items`));
   }
 
-  movements(): Promise<KardexMovementDTO[]> {
+  movements(params?: KardexQueryParams): Promise<KardexMovementDTO[]> {
+    const query = this.buildQuery(params);
     return firstValueFrom(
-      this.http.get<KardexMovementDTO[]>(`${this.base}/movements`),
+      this.http.get<KardexMovementDTO[]>(`${this.base}/movements${query}`),
     );
   }
 
-  movementsByPlatform(platformId: number): Promise<KardexMovementDTO[]> {
+  movementsByPlatform(
+    platformId: number,
+    params?: Omit<KardexQueryParams, 'platformId'>,
+  ): Promise<KardexMovementDTO[]> {
+    const query = this.buildQuery(params);
     return firstValueFrom(
-      this.http.get<KardexMovementDTO[]>(`${this.base}/platform/${platformId}`),
+      this.http.get<KardexMovementDTO[]>(
+        `${this.base}/platform/${platformId}${query}`,
+      ),
     );
+  }
+
+  private buildQuery(params?: KardexQueryParams): string {
+    if (!params) return '';
+    const p = new URLSearchParams();
+    if (params.platformId) p.set('platformId', String(params.platformId));
+    if (params.take) p.set('take', String(params.take));
+    if (params.skip) p.set('skip', String(params.skip));
+    const str = p.toString();
+    return str ? `?${str}` : '';
   }
 }

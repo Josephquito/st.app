@@ -4,6 +4,7 @@ import {
   CompanyDTO,
   CompaniesService,
 } from '../../../services/companies.service';
+import { parseApiError } from '../../../utils/error.utils';
 
 @Component({
   selector: 'app-delete-company-modal',
@@ -34,13 +35,11 @@ export class DeleteCompanyModal {
 
     this.loading = true;
     this.errorMessage = '';
-
     try {
       await this.api.remove(this.company.id);
       this.deleted.emit();
     } catch (e: any) {
-      this.errorMessage =
-        e?.error?.message ?? 'No se pudo eliminar la company.';
+      this.errorMessage = parseApiError(e);
     } finally {
       this.loading = false;
     }

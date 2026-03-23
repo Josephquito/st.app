@@ -1,0 +1,175 @@
+<dialog class="modal" [class.modal-open]="open">
+  <div class="modal-box max-w-2xl">
+    <h3 class="font-bold text-lg">Reemplazar cuenta</h3>
+
+    <div *ngIf="errorMessage" class="alert alert-error mt-3">
+      <span>{{ errorMessage }}</span>
+    </div>
+
+    <div class="mt-4 grid grid-cols-1 gap-3">
+      <!-- Modo de reemplazo -->
+      <label class="form-control">
+        <div class="label">
+          <span class="label-text">Tipo de reemplazo</span>
+        </div>
+        <select class="select select-bordered" [(ngModel)]="mode">
+          <option [ngValue]="null" disabled>Selecciona un tipo...</option>
+          <option value="credentials">
+            Sin costo — proveedor envía nuevas credenciales
+          </option>
+          <option value="paid">Con costo — compramos cuenta nueva</option>
+          <option value="inventory">
+            Desde inventario — usamos cuenta disponible
+          </option>
+        </select>
+      </label>
+
+      <!-- MODO 1: Credenciales sin costo -->
+      <ng-container *ngIf="mode === 'credentials'">
+        <label class="form-control">
+          <div class="label"><span class="label-text">Nuevo email</span></div>
+          <input
+            class="input input-bordered"
+            type="email"
+            [(ngModel)]="email"
+            placeholder="nuevo@correo.com"
+          />
+        </label>
+        <label class="form-control">
+          <div class="label"><span class="label-text">Nueva clave</span></div>
+          <input
+            class="input input-bordered"
+            [(ngModel)]="password"
+            placeholder="Clave"
+          />
+        </label>
+      </ng-container>
+
+      <!-- MODO 2: Con costo adicional -->
+      <ng-container *ngIf="mode === 'paid'">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <!-- Nuevo email -->
+          <label class="form-control">
+            <div class="label"><span class="label-text">Nuevo email</span></div>
+            <input
+              class="input input-bordered"
+              type="email"
+              [(ngModel)]="email"
+              placeholder="nuevo@correo.com"
+            />
+          </label>
+
+          <!-- Nueva clave -->
+          <label class="form-control">
+            <div class="label"><span class="label-text">Nueva clave</span></div>
+            <input
+              class="input input-bordered"
+              [(ngModel)]="password"
+              placeholder="Clave"
+            />
+          </label>
+
+          <!-- Costo total -->
+          <label class="form-control">
+            <div class="label"><span class="label-text">Costo total</span></div>
+            <input
+              class="input input-bordered"
+              [ngModel]="totalCost"
+              (ngModelChange)="onTotalCostChange($event)"
+              placeholder="12,50 o 12.50"
+              inputmode="decimal"
+            />
+          </label>
+
+          <!-- Duración -->
+          <div class="form-control">
+            <div class="label"><span class="label-text">Duración</span></div>
+            <div class="flex gap-2 flex-wrap">
+              <select
+                class="select select-bordered"
+                [ngModel]="periodMonths"
+                (ngModelChange)="onPeriodMonthsChange($event)"
+              >
+                <option [ngValue]="null">Meses (opcional)</option>
+                <option [ngValue]="1">1 mes</option>
+                <option [ngValue]="3">3 meses</option>
+                <option [ngValue]="6">6 meses</option>
+                <option [ngValue]="12">12 meses</option>
+              </select>
+              <input
+                class="input input-bordered flex-1 min-w-[120px]"
+                type="number"
+                [ngModel]="periodDays"
+                (ngModelChange)="onPeriodDaysChange($event)"
+                placeholder="Días (ej: 30)"
+                min="1"
+              />
+            </div>
+            <div class="label">
+              <span class="label-text-alt opacity-70">
+                Días: <b>{{ durationDays }}</b> · Corte:
+                <b>{{ cutoffDate || '—' }}</b>
+              </span>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- MODO 3: Desde inventario -->
+      <ng-container *ngIf="mode === 'inventory'">
+        <div class="grid grid-cols-1 gap-3">
+          <label class="form-control">
+            <div class="label">
+              <span class="label-text">Cuenta de reemplazo</span>
+              <span class="label-text-alt opacity-50">
+                Solo cuentas activas de la misma plataforma con perfiles
+                disponibles
+              </span>
+            </div>
+            <select
+              class="select select-bordered"
+              [(ngModel)]="replacementAccountId"
+            >
+              <option [ngValue]="null" disabled>
+                Selecciona una cuenta...
+              </option>
+              <option *ngFor="let a of inventoryOptions" [ngValue]="a.id">
+                {{ a.email }} · {{ availableCount(a) }} disponibles · Corte: {{
+                a.cutoffDate | date: 'dd/MM/yyyy' : 'UTC' }}
+              </option>
+            </select>
+            <div class="label" *ngIf="inventoryOptions.length === 0">
+              <span class="label-text-alt text-warning">
+                No hay cuentas disponibles para reemplazo en esta plataforma.
+              </span>
+            </div>
+          </label>
+        </div>
+      </ng-container>
+    </div>
+
+    <div class="modal-action">
+      <button
+        class="btn btn-ghost"
+        type="button"
+        (click)="onClose()"
+        [disabled]="loading"
+      >
+        Cancelar
+      </button>
+      <button
+        class="btn btn-neutral"
+        type="button"
+        (click)="submit()"
+        [disabled]="loading || !mode"
+      >
+        <span *ngIf="loading" class="loading loading-spinner loading-sm"></span>
+        Reemplazar
+      </button>
+    </div>
+  </div>
+
+  <form method="dialog" class="modal-backdrop">
+    <button type="button" (click)="onClose()">close</button>
+  </form>
+</dialog>
