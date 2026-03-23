@@ -61,19 +61,19 @@ export class AlertPipe implements PipeTransform {
     if (!cutoffDate) return { badgeClass: 'badge-ghost', label: '—' };
     const d = new Date(cutoffDate);
     if (isNaN(d.getTime())) return { badgeClass: 'badge-ghost', label: '—' };
-    const cutoff = new Date(
-      Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
+
+    // cutoffDate viene en UTC, normalizamos solo la fecha UTC
+    const cutoff = Date.UTC(
+      d.getUTCFullYear(),
+      d.getUTCMonth(),
+      d.getUTCDate(),
     );
-    const today = new Date(
-      Date.UTC(
-        new Date().getUTCFullYear(),
-        new Date().getUTCMonth(),
-        new Date().getUTCDate(),
-      ),
-    );
-    const days = Math.ceil(
-      (cutoff.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
-    );
+
+    // today usa fecha LOCAL del usuario, no UTC
+    const now = new Date();
+    const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const days = Math.ceil((cutoff - today) / (1000 * 60 * 60 * 24));
     return getAlertDisplay(days, status);
   }
 }
@@ -120,13 +120,11 @@ export function getProfileDotColor(
   const cutoff = new Date(
     Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
   );
+  const now = new Date();
   const today = new Date(
-    Date.UTC(
-      new Date().getUTCFullYear(),
-      new Date().getUTCMonth(),
-      new Date().getUTCDate(),
-    ),
+    Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()),
   );
+
   const days = Math.ceil(
     (cutoff.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
   );
