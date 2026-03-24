@@ -27,6 +27,36 @@ export class ImportAccountsPage implements AfterViewChecked {
   private zone = inject(NgZone);
 
   @ViewChild('consoleEl') consoleEl?: ElementRef;
+  @ViewChild('errorsEl') errorsEl?: ElementRef;
+
+  get errorLines() {
+    return this.liveLines.filter(
+      (l) => l.type === 'skipped' || l.type === 'warning' || l.type === 'error',
+    );
+  }
+
+  get hasErrors() {
+    return this.errorLines.length > 0;
+  }
+
+  copiedErrors = false;
+
+  copyErrors() {
+    const text = this.errorLines
+      .map((l) => {
+        if (l.type === 'skipped')
+          return `✕ ${l.email} → ${l.message.slice(l.message.indexOf('→') + 2)}`;
+        if (l.type === 'warning')
+          return `⚠ ${l.email} · perfil #${l.profileNo} → ${l.message.slice(l.message.indexOf('→') + 2)}`;
+        return `✕ Error: ${l.message}`;
+      })
+      .join('\n');
+
+    navigator.clipboard.writeText(text).then(() => {
+      this.copiedErrors = true;
+      setTimeout(() => (this.copiedErrors = false), 2000);
+    });
+  }
 
   loading = false;
   errorMessage = '';
@@ -49,6 +79,10 @@ export class ImportAccountsPage implements AfterViewChecked {
     if (this.consoleEl) {
       this.consoleEl.nativeElement.scrollTop =
         this.consoleEl.nativeElement.scrollHeight;
+    }
+    if (this.errorsEl) {
+      this.errorsEl.nativeElement.scrollTop =
+        this.errorsEl.nativeElement.scrollHeight;
     }
   }
 
