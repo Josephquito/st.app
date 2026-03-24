@@ -1,8 +1,6 @@
-<!-- Buscador + Filtros -->
-<div *ngIf="!loading" class="flex flex-wrap items-center gap-2 mb-4">
-  <label
-    class="input input-bordered flex items-center gap-2 flex-1 min-w-[260px]"
-  >
+<!-- Buscador -->
+<div *ngIf="!loading" class="flex flex-col gap-3 mb-4">
+  <label class="input input-bordered flex items-center gap-2">
     <svg
       xmlns="http://www.w3.org/2000/svg"
       class="h-4 w-4 opacity-60 shrink-0"
@@ -23,47 +21,83 @@
       [(ngModel)]="searchText"
       (ngModelChange)="onFilterChange()"
     />
+    <button
+      *ngIf="searchText"
+      type="button"
+      class="opacity-40 hover:opacity-100 transition-opacity"
+      (click)="searchText = ''; onFilterChange()"
+    >
+      ✕
+    </button>
   </label>
 
-  <select
-    class="select select-bordered"
-    [(ngModel)]="statusFilter"
-    (ngModelChange)="onFilterChange()"
-  >
-    <option value="">Todos los estados</option>
-    <option value="ACTIVE">Activa</option>
-    <option value="INACTIVE">Inactiva</option>
-  </select>
+  <!-- Chips estado -->
+  <div class="flex flex-wrap items-center gap-2">
+    <span
+      class="text-xs text-base-content/40 font-medium uppercase tracking-wide mr-1"
+      >Estado</span
+    >
+    <button
+      *ngFor="let s of statusOptions"
+      type="button"
+      class="badge badge-lg cursor-pointer transition-all"
+      [ngClass]="
+        statusFilter === s.value
+          ? 'badge-neutral'
+          : 'badge-ghost opacity-50 hover:opacity-80'
+      "
+      (click)="setStatusFilter(s.value)"
+    >
+      {{ s.label }}
+    </button>
 
-  <select
-    class="select select-bordered"
-    [(ngModel)]="labelFilter"
-    (ngModelChange)="onFilterChange()"
-    *ngIf="labels.length > 0"
-  >
-    <option [ngValue]="''">Todas las etiquetas</option>
-    <option *ngFor="let l of labels" [ngValue]="l.id">{{ l.name }}</option>
-  </select>
+    <!-- Chips etiquetas -->
+    <div
+      *ngIf="labels.length > 0"
+      class="flex items-center gap-2 ml-3 pl-3 border-l border-base-300"
+    >
+      <span
+        class="text-xs text-base-content/40 font-medium uppercase tracking-wide mr-1"
+        >Etiqueta</span
+      >
+      <button
+        type="button"
+        class="badge badge-lg cursor-pointer transition-all"
+        [ngClass]="
+          labelFilter === ''
+            ? 'badge-neutral'
+            : 'badge-ghost opacity-50 hover:opacity-80'
+        "
+        (click)="setLabelFilter('')"
+      >
+        Todas
+      </button>
+      <button
+        *ngFor="let l of labels"
+        type="button"
+        class="badge badge-lg cursor-pointer transition-all border-0"
+        [style.background-color]="
+          labelFilter === l.id ? l.color : 'transparent'
+        "
+        [style.color]="labelFilter === l.id ? '#fff' : l.color"
+        [style.outline]="'2px solid ' + l.color"
+        [style.opacity]="labelFilter === l.id ? '1' : '0.6'"
+        (click)="setLabelFilter(l.id)"
+      >
+        {{ l.name }}
+      </button>
+    </div>
 
-  <select
-    class="select select-bordered"
-    [(ngModel)]="sortKey"
-    (ngModelChange)="sortDir = 'asc'; onFilterChange()"
-  >
-    <option [value]="null">Sin orden</option>
-    <option value="ALERT">Alerta</option>
-    <option value="CUTOFF">Fecha de corte</option>
-    <option value="PROFILES">Perfiles</option>
-    <option value="STATUS">Estado</option>
-  </select>
-
-  <button
-    type="button"
-    class="btn btn-outline btn"
-    (click)="sortDir = sortDir === 'asc' ? 'desc' : 'asc'; onFilterChange()"
-  >
-    {{ sortDir === "asc" ? "↑ A-Z" : "↓ Z-A" }}
-  </button>
+    <!-- Limpiar filtros -->
+    <button
+      *ngIf="hasActiveFilters()"
+      type="button"
+      class="btn btn-ghost btn-xs ml-auto text-base-content/40"
+      (click)="clearFilters()"
+    >
+      Limpiar filtros
+    </button>
+  </div>
 </div>
 
 <!-- Tabla -->
@@ -78,18 +112,48 @@
       <table class="table">
         <thead>
           <tr>
-            <th class="no-wrap">Plataforma</th>
-            <th class="no-wrap">Email</th>
+            <th
+              class="no-wrap cursor-pointer select-none"
+              (click)="setSort('PLATFORM')"
+            >
+              <span class="inline-flex items-center gap-1">
+                Plataforma
+                <span class="text-base-content/30">{{
+                  sortIndicator("PLATFORM")
+                }}</span>
+              </span>
+            </th>
+            <th
+              class="no-wrap cursor-pointer select-none"
+              (click)="setSort('EMAIL')"
+            >
+              <span class="inline-flex items-center gap-1">
+                Email
+                <span class="text-base-content/30">{{
+                  sortIndicator("EMAIL")
+                }}</span>
+              </span>
+            </th>
             <th class="no-wrap">Clave</th>
-            <th class="no-wrap">Proveedor</th>
+            <th
+              class="no-wrap cursor-pointer select-none"
+              (click)="setSort('SUPPLIER')"
+            >
+              <span class="inline-flex items-center gap-1">
+                Proveedor
+                <span class="text-base-content/30">{{
+                  sortIndicator("SUPPLIER")
+                }}</span>
+              </span>
+            </th>
             <th
               class="no-wrap cursor-pointer select-none"
               (click)="setSort('CUTOFF')"
             >
               <span class="inline-flex items-center gap-1">
                 Fecha corte
-                <span *ngIf="sortKey === 'CUTOFF'">{{
-                  sortDir === "asc" ? "▲" : "▼"
+                <span class="text-base-content/30">{{
+                  sortIndicator("CUTOFF")
                 }}</span>
               </span>
             </th>
@@ -99,19 +163,19 @@
             >
               <span class="inline-flex items-center gap-1">
                 Alerta
-                <span *ngIf="sortKey === 'ALERT'">{{
-                  sortDir === "asc" ? "▲" : "▼"
+                <span class="text-base-content/30">{{
+                  sortIndicator("ALERT")
                 }}</span>
               </span>
             </th>
             <th
               class="no-wrap cursor-pointer select-none"
-              (click)="setSort('PROFILES')"
+              (click)="cycleProfilesSort()"
             >
               <span class="inline-flex items-center gap-1">
                 Perfiles
-                <span *ngIf="sortKey === 'PROFILES'">{{
-                  sortDir === "asc" ? "▲" : "▼"
+                <span class="text-base-content/30 text-xs">{{
+                  profilesSortIndicator()
                 }}</span>
               </span>
             </th>
@@ -232,12 +296,12 @@
 
           <tr *ngIf="visibleAccountsList.length === 0">
             <td colspan="8" class="text-center text-base-content/50 py-6">
-              No hay cuentas registradas.
+              No hay cuentas que coincidan con los filtros.
             </td>
           </tr>
         </tbody>
       </table>
-      <!-- Cargar más -->
+
       <div class="flex justify-center mt-4" *ngIf="showLoadMore">
         <button class="btn btn-ghost btn-sm" (click)="loadMore.emit()">
           Cargar más cuentas
