@@ -83,5 +83,14 @@ export const routes: Routes = [
         (m) => m.ImportAccountsPage,
       ),
   },
+  {
+    path: 'profiles',
+    canActivate: [CompanySelectedGuard, PermissionGuard],
+    data: { permissions: ['STREAMING_ACCOUNTS:READ'] },
+    loadComponent: () =>
+      import('./pages/profiles/all-profiles-page.component').then(
+        (m) => m.AllProfilesPageComponent,
+      ),
+  },
   { path: '**', redirectTo: 'companies' },
 ];

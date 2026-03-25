@@ -63,6 +63,15 @@
           Cuentas
         </button>
         <button
+          *ngIf="auth.hasPermission('STREAMING_ACCOUNTS:READ')"
+          type="button"
+          class="menu-link"
+          routerLink="/profiles"
+          routerLinkActive="active"
+        >
+          Perfiles
+        </button>
+        <button
           *ngIf="auth.hasPermission('STREAMING_SALES:READ')"
           type="button"
           class="menu-link"
@@ -230,6 +239,15 @@
       (click)="closeMobileMenu()"
     >
       Cuentas
+    </button>
+    <button
+      *ngIf="auth.hasPermission('STREAMING_ACCOUNTS:READ')"
+      type="button"
+      class="menu-link"
+      routerLink="/profiles"
+      routerLinkActive="active"
+    >
+      Perfiles
     </button>
     <button
       *ngIf="auth.hasPermission('STREAMING_SALES:READ')"

@@ -112,6 +112,7 @@ export class CreateCustomerModal implements OnChanges {
       this.loading = false;
     }
   }
+  
   async loadSuggestedName() {
     this.loadingSuggestion = true;
     try {

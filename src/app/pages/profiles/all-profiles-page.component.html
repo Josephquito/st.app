@@ -1,0 +1,531 @@
+<div class="page">
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <h1 class="title">Perfiles</h1>
+      <p class="subtitle">
+        Mostrando <b>{{ visible.length }}</b> perfil{{
+          visible.length !== 1 ? "es" : ""
+        }}
+      </p>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="errorMessage" class="alert alert-error">
+    <span>{{ errorMessage }}</span>
+  </div>
+
+  <!-- Tabs de plataformas -->
+  <app-platforms-tabs
+    [platforms]="platformsList"
+    [activePlatformId]="activePlatformId"
+    [canCreate]="false"
+    [canUpdate]="false"
+    [canDelete]="false"
+    (filterChange)="onPlatformTabChange($event)"
+  />
+
+  <!-- Filtros -->
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body py-3">
+      <div class="flex flex-col gap-3">
+        <!-- Buscador -->
+        <label class="input input-bordered flex items-center gap-2">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4 opacity-60 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+          <input
+            type="text"
+            class="grow"
+            placeholder="Buscar por email, cliente, proveedor..."
+            [(ngModel)]="searchText"
+            (ngModelChange)="onFilterChange()"
+          />
+          <button
+            *ngIf="searchText"
+            type="button"
+            class="opacity-40 hover:opacity-100 transition-opacity"
+            (click)="searchText = ''; onFilterChange()"
+          >
+            ✕
+          </button>
+        </label>
+
+        <!-- Filtro estado -->
+        <div class="flex flex-wrap items-center gap-2">
+          <span
+            class="text-xs text-base-content/40 font-medium uppercase tracking-wide mr-1"
+          >
+            Estado
+          </span>
+          <button
+            type="button"
+            class="badge badge-lg cursor-pointer transition-all"
+            [ngClass]="
+              statusFilter === ''
+                ? 'badge-neutral'
+                : 'badge-ghost opacity-50 hover:opacity-80'
+            "
+            (click)="setStatusFilter('')"
+          >
+            Todos
+          </button>
+          <button
+            type="button"
+            class="badge badge-lg cursor-pointer transition-all"
+            [ngClass]="
+              statusFilter === 'AVAILABLE'
+                ? 'badge-neutral'
+                : 'badge-ghost opacity-50 hover:opacity-80'
+            "
+            (click)="setStatusFilter('AVAILABLE')"
+          >
+            Disponible
+          </button>
+          <button
+            type="button"
+            class="badge badge-lg cursor-pointer transition-all"
+            [ngClass]="
+              statusFilter === 'SOLD'
+                ? 'badge-neutral'
+                : 'badge-ghost opacity-50 hover:opacity-80'
+            "
+            (click)="setStatusFilter('SOLD')"
+          >
+            Vendido
+          </button>
+          <button
+            *ngIf="hasActiveFilters()"
+            type="button"
+            class="btn btn-ghost btn-xs ml-auto text-base-content/40"
+            (click)="clearFilters()"
+          >
+            Limpiar filtros
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="flex items-center gap-2 py-8 justify-center">
+    <span class="loading loading-spinner loading-md"></span>
+    <span>Cargando perfiles...</span>
+  </div>
+
+  <!-- Tabla -->
+  <div *ngIf="!loading" class="card bg-base-100 shadow-sm">
+    <div class="card-body p-0">
+      <div class="overflow-x-auto">
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="no-wrap">Cuenta</th>
+              <th class="no-wrap">Cliente</th>
+              <th class="no-wrap">F. Venta</th>
+              <th
+                class="cursor-pointer select-none no-wrap"
+                (click)="setSort('CUTOFF')"
+              >
+                F. Corte
+                <span class="text-base-content/30">{{
+                  sortIndicator("CUTOFF")
+                }}</span>
+              </th>
+              <th
+                class="cursor-pointer select-none no-wrap"
+                (click)="setSort('ALERT')"
+              >
+                Alerta
+                <span class="text-base-content/30">{{
+                  sortIndicator("ALERT")
+                }}</span>
+              </th>
+              <th class="no-wrap">Renovación</th>
+              <th class="no-wrap">Notas</th>
+              <th class="text-right no-wrap">Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let p of visible" class="hover">
+              <!-- Cuenta - plataforma y etiqueta -->
+              <td class="no-wrap">
+                <div class="flex items-start gap-2">
+                  <span
+                    class="mt-1 h-2 w-2 rounded-full flex-shrink-0"
+                    [ngClass]="(p.account.status | status).color"
+                  ></span>
+
+                  <div class="min-w-0">
+                    <div class="text-sm font-mono truncate">
+                      {{ p.account.email }}
+                    </div>
+
+                    <div class="flex items-center gap-1 mt-0.5 flex-wrap">
+                      <span class="text-xs text-base-content/50">
+                        {{ p.account.platform.name }}
+                      </span>
+
+                      <span
+                        *ngIf="p.label"
+                        class="badge badge-sm border-0"
+                        [style.background-color]="p.label.color + '22'"
+                        [style.color]="p.label.color"
+                      >
+                        {{ p.label.name }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Cliente -->
+              <td class="no-wrap">
+                <ng-container *ngIf="p.status === 'SOLD' && getSale(p) as sale">
+                  <div>
+                    <div class="font-medium text-sm">
+                      {{ sale.customer?.name || "—" }}
+                    </div>
+                    <div class="text-xs text-base-content/40">
+                      {{ sale.customer?.contact || "" }}
+                    </div>
+                  </div>
+                </ng-container>
+
+                <ng-container *ngIf="p.status === 'AVAILABLE'">
+                  <span class="badge badge-ghost badge-sm">Disponible</span>
+                </ng-container>
+              </td>
+
+              <!-- F. Venta -->
+              <td class="no-wrap text-sm text-base-content/60">
+                {{
+                  getSale(p)?.saleDate
+                    ? (getSale(p)?.saleDate | date: "dd/MM/yyyy" : "UTC")
+                    : "—"
+                }}
+              </td>
+
+              <!-- F. Corte -->
+              <td class="no-wrap text-sm text-base-content/60">
+                {{
+                  getSale(p)?.cutoffDate
+                    ? (getSale(p)?.cutoffDate | date: "dd/MM/yyyy" : "UTC")
+                    : "—"
+                }}
+              </td>
+
+              <!-- Alerta -->
+              <td class="no-wrap">
+                <span
+                  *ngIf="p.status === 'SOLD'"
+                  class="badge badge-sm"
+                  [ngClass]="
+                    (getSaleCutoff(p) | alert: getSaleStatus(p)).badgeClass
+                  "
+                >
+                  {{ (getSaleCutoff(p) | alert: getSaleStatus(p)).label }}
+                </span>
+                <span
+                  *ngIf="p.status === 'AVAILABLE'"
+                  class="text-base-content/30 text-sm"
+                  >—</span
+                >
+              </td>
+
+              <!-- Renovación -->
+              <td class="no-wrap">
+                <div
+                  *ngIf="p.status === 'SOLD' && p.sales[0] as sale"
+                  class="flex items-center gap-2"
+                >
+                  <span
+                    class="h-2 w-2 rounded-full flex-shrink-0"
+                    [ngClass]="(sale.renewalStatus | status).color"
+                  ></span>
+                  <select
+                    class="select select-bordered select-xs"
+                    [value]="sale.renewalStatus"
+                    (change)="onRenewalStatusChange(p, $event)"
+                  >
+                    <option value="NOT_APPLICABLE">—</option>
+                    <option value="PENDING">Pendiente</option>
+                    <option value="SENT">Enviado</option>
+                  </select>
+                </div>
+                <span
+                  *ngIf="p.status === 'AVAILABLE'"
+                  class="text-base-content/30 text-sm"
+                  >—</span
+                >
+              </td>
+
+              <!-- Notas -->
+              <td class="no-wrap min-w-[160px] max-w-[200px]">
+                <textarea
+                  *ngIf="p.status === 'SOLD'"
+                  class="textarea textarea-bordered textarea-xs w-full resize-none text-xs"
+                  rows="1"
+                  maxlength="50"
+                  [value]="getSale(p)?.notes || ''"
+                  (blur)="onSaleNoteBlur(p, $event)"
+                  (input)="autoResize($event)"
+                  placeholder="Agregar nota..."
+                ></textarea>
+                <span
+                  *ngIf="p.status === 'AVAILABLE'"
+                  class="text-base-content/30 text-sm"
+                  >—</span
+                >
+              </td>
+
+              <!-- Acciones -->
+              <td class="no-wrap text-right" (click)="$event.stopPropagation()">
+                <ng-container
+                  *ngTemplateOutlet="profileActions; context: { p: p }"
+                ></ng-container>
+              </td>
+            </tr>
+
+            <tr *ngIf="visible.length === 0">
+              <td colspan="9" class="text-center text-base-content/50 py-8">
+                No hay perfiles que coincidan con los filtros.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Acciones -->
+  <ng-template #profileActions let-p="p">
+    <div class="flex items-center justify-end -space-x-1">
+      <button
+        type="button"
+        class="btn btn-ghost btn-sm !px-1.5"
+        title="Copiar info"
+        (click)="copyInfo(p)"
+      >
+        <svg
+          *ngIf="copiedKey !== 'info-' + p.id"
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+          />
+        </svg>
+        <svg
+          *ngIf="copiedKey === 'info-' + p.id"
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-4 w-4 text-success"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2.5"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M5 13l4 4L19 7"
+          />
+        </svg>
+      </button>
+
+      <button
+        type="button"
+        class="btn btn-ghost btn-sm !px-1.5"
+        title="Copiar nueva clave"
+        (click)="copyPassword(p)"
+      >
+        <svg
+          *ngIf="copiedKey !== 'pass-' + p.id"
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+          />
+        </svg>
+        <svg
+          *ngIf="copiedKey === 'pass-' + p.id"
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-4 w-4 text-success"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2.5"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M5 13l4 4L19 7"
+          />
+        </svg>
+      </button>
+
+      <button
+        type="button"
+        class="btn btn-ghost btn-sm !px-1.5 text-warning"
+        title="Vaciar perfil"
+        (click)="onEmptyProfile(p)"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+          />
+        </svg>
+      </button>
+
+      <button
+        type="button"
+        class="btn btn-ghost btn-sm !px-1.5 !min-w-[2rem]"
+        (click)="toggleProfileMenu(p, $event)"
+      >
+        ⋮
+      </button>
+    </div>
+  </ng-template>
+
+  <!-- Menú flotante -->
+  <div
+    *ngIf="menuOpen && menuProfile"
+    class="fixed z-[3200]"
+    [style.left.px]="menuX"
+    [style.top.px]="menuY"
+    [style.transform]="
+      menuDirection === 'up'
+        ? 'translateY(calc(-100% - 6px))'
+        : 'translateY(6px)'
+    "
+    (click)="$event.stopPropagation()"
+  >
+    <div class="bg-base-100 shadow rounded-box w-48 border border-base-200">
+      <ul class="menu p-2">
+        <li *ngIf="!canUpdate">
+          <span class="opacity-70 text-sm">Sin permiso</span>
+        </li>
+
+        <ng-container *ngIf="canUpdate">
+          <li>
+            <button
+              type="button"
+              (click)="onEditSale(menuProfile!); closeMenu()"
+            >
+              Editar venta
+            </button>
+          </li>
+
+          <li>
+            <button
+              type="button"
+              (click)="copyRenewMessage(menuProfile!); closeMenu()"
+            >
+              Copiar renovar
+            </button>
+          </li>
+
+          <li>
+            <button
+              type="button"
+              (click)="onRenewSale(menuProfile!); closeMenu()"
+            >
+              Renovar venta
+            </button>
+          </li>
+
+          <li *ngIf="getSaleStatus(menuProfile!) === 'ACTIVE'">
+            <button
+              type="button"
+              (click)="onPauseSale(menuProfile!); closeMenu()"
+            >
+              Pausar venta
+            </button>
+          </li>
+
+          <li *ngIf="getSaleStatus(menuProfile!) === 'PAUSED'">
+            <button
+              type="button"
+              (click)="onResumeSale(menuProfile!); closeMenu()"
+            >
+              Reanudar venta
+            </button>
+          </li>
+
+          <li *ngIf="getSaleStatus(menuProfile!) === 'PAUSED'">
+            <button
+              type="button"
+              (click)="onRefundSale(menuProfile!); closeMenu()"
+            >
+              Reembolsar
+            </button>
+          </li>
+        </ng-container>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Modales -->
+  <app-edit-sale-modal
+    [open]="editSaleOpen"
+    [sale]="selectedSale"
+    [account]="selectedAccount"
+    (close)="editSaleOpen = false; selectedSale = null; selectedAccount = null"
+    (updated)="onSaleUpdated()"
+  />
+  <app-renew-sale-modal
+    [open]="renewSaleOpen"
+    [sale]="saleToRenew"
+    [account]="selectedAccount"
+    (close)="renewSaleOpen = false; saleToRenew = null; selectedAccount = null"
+    (renewed)="onSaleRenewed()"
+  />
+  <app-confirm-action-modal
+    [open]="confirmEmptyOpen"
+    title="¿Vaciar perfil?"
+    [message]="
+      'El cliente perderá acceso y el perfil #' +
+      (profileToEmpty?.profileNo ?? '') +
+      ' volverá a estar disponible.'
+    "
+    confirmLabel="Sí, vaciar"
+    [danger]="false"
+    [loading]="loading"
+    (confirm)="confirmEmpty()"
+    (cancel)="cancelEmpty()"
+  />
+</div>

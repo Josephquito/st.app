@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { StreamingSaleDTO } from './streaming-sales.service';
 
 export type StreamingAccountStatus =
   | 'ACTIVE'
@@ -113,6 +114,24 @@ export type CorrectCostDto = {
   totalCost: string;
 };
 
+// Agrega este tipo junto a los otros DTOs, antes del @Injectable
+export type ProfileWithContextDTO = {
+  id: number;
+  profileNo: number;
+  status: ProfileStatus;
+  labelId: number | null;
+  label: ProfileLabelDTO | null;
+  account: {
+    id: number;
+    email: string;
+    password: string;
+    cutoffDate: string;
+    status: StreamingAccountStatus;
+    platform: { id: number; name: string };
+    supplier: { id: number; name: string };
+  };
+  sales: StreamingSaleDTO[];
+};
 @Injectable({ providedIn: 'root' })
 export class StreamingAccountsService {
   private http = inject(HttpClient);
@@ -263,6 +282,12 @@ export class StreamingAccountsService {
       this.http.patch<any>(`${this.base}/profiles/${profileId}/label`, {
         labelId,
       }),
+    );
+  }
+
+  findAllProfiles(): Promise<ProfileWithContextDTO[]> {
+    return firstValueFrom(
+      this.http.get<ProfileWithContextDTO[]>(`${this.base}/profiles/all`),
     );
   }
 }

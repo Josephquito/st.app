@@ -1,0 +1,116 @@
+.page {
+  padding: 16px;
+  max-width: 1300px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+/* ===========
+   Tabs bar
+   =========== */
+.platform-bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.platform-meta {
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* ✅ contenedor de tabs con WRAP y GAP (sin scroll) */
+.platform-tabs--wrap {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px; /* 👈 aire entre “chips” */
+  padding: 10px;
+  min-height: 52px; /* mantiene altura agradable */
+}
+
+/* ✅ cada item (tab + ⋮) con aire */
+.platform-tab-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ✅ tab como chip: no apretado, tamaño consistente */
+.platform-tab {
+  height: 36px; /* más “botón” */
+  padding: 0 14px; /* más aire horizontal */
+  border-radius: 12px; /* más moderno */
+  line-height: 36px;
+  white-space: nowrap;
+}
+
+/* ✅ label con corte elegante si el nombre es gigante */
+.platform-tab-label {
+  display: inline-block;
+  max-width: 180px; /* ajusta si quieres */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+/* ✅ botón ⋮ que no aprieta visualmente */
+.platform-menu-btn {
+  height: 28px;
+  min-height: 28px;
+  width: 28px;
+  padding: 0;
+  border-radius: 10px;
+  opacity: 0.75;
+}
+.platform-tab-item:hover .platform-menu-btn {
+  opacity: 1;
+}
+
+/* opcional: tab de crear un poquito distinto */
+.platform-tab--create {
+  font-weight: 600;
+}
+
+/* ===========
+   Tabla UX
+   =========== */
+.row-click {
+  cursor: pointer;
+}
+
+.row-click:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+/* Que el texto mono no rompa feo en pantallas pequeñas */
+.font-mono {
+  word-break: break-all;
+}
+
+.no-wrap {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

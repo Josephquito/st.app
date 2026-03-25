@@ -76,6 +76,7 @@ export class CustomersPage implements OnInit {
   menuCustomer: CustomerDTO | null = null;
   menuX = 0;
   menuY = 0;
+  menuDirection: 'down' | 'up' = 'down';
 
   readonly statusOptions: {
     value: CustomerStatusFilter | '';
@@ -200,13 +201,31 @@ export class CustomersPage implements OnInit {
 
   toggleMenu(c: CustomerDTO, ev: MouseEvent) {
     ev.stopPropagation();
+
     if (this.menuOpen && this.menuCustomer?.id === c.id) {
       this.closeMenu();
       return;
     }
+
     const rect = (ev.currentTarget as HTMLElement).getBoundingClientRect();
-    this.menuX = rect.right;
-    this.menuY = rect.bottom + 6;
+
+    const menuWidth = 192; // w-48
+    const approxMenuHeight = 120; // aproximado, solo para decidir arriba/abajo
+    const padding = 8;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // Se ancla al borde derecho del botón porque usamos translateX(-100%)
+    let x = rect.right;
+
+    if (x > vw - padding) x = vw - padding;
+    if (x < menuWidth + padding) x = menuWidth + padding;
+
+    const openUp = rect.bottom + approxMenuHeight > vh - padding;
+
+    this.menuX = x;
+    this.menuY = openUp ? rect.top : rect.bottom;
+    this.menuDirection = openUp ? 'up' : 'down';
     this.menuCustomer = c;
     this.menuOpen = true;
   }
@@ -216,13 +235,18 @@ export class CustomersPage implements OnInit {
     this.menuCustomer = null;
   }
 
-  @HostListener('document:click') onDocClick() {
+  @HostListener('document:click')
+  onDocClick() {
     this.closeMenu();
   }
-  @HostListener('window:scroll') onScroll() {
+
+  @HostListener('window:scroll')
+  onScroll() {
     this.closeMenu();
   }
-  @HostListener('window:resize') onResize() {
+
+  @HostListener('window:resize')
+  onResize() {
     this.closeMenu();
   }
 

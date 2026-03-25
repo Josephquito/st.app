@@ -68,6 +68,7 @@ export class AccountsTableComponent {
   menuAccount: StreamingAccountDTO | null = null;
   menuX = 0;
   menuY = 0;
+  menuDirection: 'down' | 'up' = 'down';
 
   searchText = '';
   statusFilter: 'ACTIVE' | 'INACTIVE' | '' = '';
@@ -85,15 +86,35 @@ export class AccountsTableComponent {
 
   // ── Menú ──────────────────────────────────────────────────────────────────
 
+  // ── Menú ──────────────────────────────────────────────────────────────────
   toggleMenu(a: StreamingAccountDTO, ev: MouseEvent) {
     ev.stopPropagation();
+
     if (this.menuOpen && this.menuAccount?.id === a.id) {
       this.closeMenu();
       return;
     }
+
     const rect = (ev.currentTarget as HTMLElement).getBoundingClientRect();
-    this.menuX = rect.right;
-    this.menuY = rect.bottom + 6;
+
+    const menuWidth = 192; // w-48
+    const approxMenuHeight = 260; // aproximado por la cantidad de opciones
+    const padding = 8;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // El menú se alinea al borde derecho del botón
+    // porque en el HTML usamos translateX(-100%)
+    let x = rect.right;
+
+    if (x > vw - padding) x = vw - padding;
+    if (x < menuWidth + padding) x = menuWidth + padding;
+
+    const openUp = rect.bottom + approxMenuHeight > vh - padding;
+
+    this.menuX = x;
+    this.menuY = openUp ? rect.top : rect.bottom;
+    this.menuDirection = openUp ? 'up' : 'down';
     this.menuAccount = a;
     this.menuOpen = true;
   }
@@ -103,13 +124,18 @@ export class AccountsTableComponent {
     this.menuAccount = null;
   }
 
-  @HostListener('document:click') onDocClick() {
+  @HostListener('document:click')
+  onDocClick() {
     this.closeMenu();
   }
-  @HostListener('window:scroll') onScroll() {
+
+  @HostListener('window:scroll')
+  onScroll() {
     this.closeMenu();
   }
-  @HostListener('window:resize') onResize() {
+
+  @HostListener('window:resize')
+  onResize() {
     this.closeMenu();
   }
 
