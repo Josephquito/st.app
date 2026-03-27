@@ -63,7 +63,17 @@ export class ChangeStatusModal implements OnChanges {
     this.errorMessage = '';
     this.loading = true;
     try {
-      await this.api.update(this.account.id, { status: this.selectedStatus });
+      if (this.selectedStatus === 'INACTIVE') {
+        await this.api.inactivate(this.account.id);
+      } else if (this.selectedStatus === 'ACTIVE') {
+        if (this.account.status === 'INACTIVE') {
+          await this.api.reactivate(this.account.id);
+        } else {
+          this.errorMessage =
+            'Para reactivar una cuenta expirada usa la opción de renovar.';
+          return;
+        }
+      }
       this.updated.emit();
       this.onClose();
     } catch (e: any) {

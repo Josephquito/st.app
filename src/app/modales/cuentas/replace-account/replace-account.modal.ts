@@ -224,7 +224,6 @@ export class ReplaceAccountModal implements OnChanges {
           email: this.email.trim(),
           password: this.password,
           purchaseDate: this.todayISO(), // ← directo
-          cutoffDate: this.cutoffDate, // ← directo
           durationDays: this.durationDays,
           totalCost: this.totalCost,
           note: this.note.trim() || undefined,

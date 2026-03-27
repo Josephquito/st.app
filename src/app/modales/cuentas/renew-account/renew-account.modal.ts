@@ -211,7 +211,6 @@ export class RenewAccountModal implements OnChanges {
     try {
       await this.api.renew(this.account.id, {
         purchaseDate: this.purchaseDate, // '2026-03-21' directo
-        cutoffDate: this.cutoffDate, // '2026-03-20' directo
         durationDays: this.durationDays,
         totalCost: cleanCost,
       });

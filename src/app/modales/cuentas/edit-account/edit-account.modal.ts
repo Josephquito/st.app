@@ -307,10 +307,16 @@ export class EditAccountModal implements OnChanges {
       return;
     }
     if (this.periodMonths !== null) {
-      this.cutoffDate = this.toISODate(this.addMonths(base, this.periodMonths));
+      const end = this.addMonths(base, this.periodMonths);
+      this.cutoffDate = this.toISODate(end);
       return;
     }
-    this.cutoffDate = '';
+    // Si no hay período nuevo, recalcula con durationDays actual de la cuenta
+    if (this.account?.durationDays) {
+      this.cutoffDate = this.toISODate(
+        this.addDays(base, this.account.durationDays),
+      );
+    }
   }
 
   private toDateInput(v: any): string {
@@ -323,6 +329,26 @@ export class EditAccountModal implements OnChanges {
 
   private todayISO(): string {
     return this.toISODate(new Date());
+  }
+
+  private getEffectiveDurationDays(): number {
+    // Si el usuario seleccionó días explícitos
+    const days = Number(this.periodDays);
+    if (Number.isFinite(days) && days >= 1) return days;
+
+    // Si el usuario seleccionó meses
+    if (this.periodMonths !== null) {
+      const base = this.parseISODate(this.purchaseDate);
+      if (!base) return 0;
+      const end = this.addMonths(base, this.periodMonths);
+      return Math.max(
+        1,
+        Math.ceil((end.getTime() - base.getTime()) / (1000 * 60 * 60 * 24)),
+      );
+    }
+
+    // Si no cambió el período, usar el de la cuenta actual
+    return this.account?.durationDays ?? 0;
   }
 
   // =========================
@@ -360,8 +386,11 @@ export class EditAccountModal implements OnChanges {
       this.errorMessage = 'Fecha de compra requerida.';
       return;
     }
-    if (!this.cutoffDate) {
-      this.errorMessage = 'Fecha de corte requerida.';
+
+    // Calcular durationDays efectivo
+    const effectiveDurationDays = this.getEffectiveDurationDays();
+    if (!effectiveDurationDays || effectiveDurationDays < 1) {
+      this.errorMessage = 'Duración inválida.';
       return;
     }
 
@@ -372,9 +401,8 @@ export class EditAccountModal implements OnChanges {
         supplierId: this.supplierId,
         email: this.email.trim(),
         password: this.password,
-        // profilesTotal: this.profilesTotal, ← eliminar esta línea
         purchaseDate: this.purchaseDate,
-        cutoffDate: this.cutoffDate,
+        durationDays: effectiveDurationDays,
         notes: this.notes?.trim() ? this.notes.trim() : null,
         ...(this.status !== this.account.status &&
         (this.status === 'INACTIVE' || this.status === 'ACTIVE')

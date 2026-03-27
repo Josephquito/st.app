@@ -6,6 +6,7 @@ import {
   StreamingAccountsService,
   ProfileWithContextDTO,
   StreamingAccountDTO,
+  AccountProfileDTO,
 } from '../../services/streaming-accounts.service';
 import {
   StreamingSalesService,
@@ -21,6 +22,7 @@ import {
   StreamingPlatformsService,
 } from '../../services/streaming-platforms.service';
 import { PlatformsTabsComponent } from '../../components/platforms-tabs/platforms-tabs.component';
+import { CreateSaleModal } from '../../modales/cuentas/create-sale/create-sale.modal';
 
 type SortKey = 'PLATFORM' | 'CUTOFF' | 'ALERT' | 'STATUS' | null;
 type SortDir = 'asc' | 'desc';
@@ -37,6 +39,7 @@ type SortDir = 'asc' | 'desc';
     RenewSaleModal,
     ConfirmActionModal,
     PlatformsTabsComponent,
+    CreateSaleModal,
   ],
   templateUrl: './all-profiles-page.component.html',
   styleUrl: './all-profiles-page.component.css',
@@ -60,6 +63,9 @@ export class AllProfilesPageComponent implements OnInit {
 
   copiedKey = '';
 
+  createSaleOpen = false;
+  selectedProfile: AccountProfileDTO | null = null;
+
   editSaleOpen = false;
   renewSaleOpen = false;
   confirmEmptyOpen = false;
@@ -77,6 +83,15 @@ export class AllProfilesPageComponent implements OnInit {
 
   platformsList: StreamingPlatformDTO[] = [];
   activePlatformId: number | null = null;
+
+  private toAccountProfileDTO(p: ProfileWithContextDTO): AccountProfileDTO {
+    const { account, sales, label, ...profile } = p as any;
+
+    return {
+      ...profile,
+      accountId: account.id,
+    } as AccountProfileDTO;
+  }
 
   get canSell() {
     return this.auth.hasPermission('STREAMING_SALES:CREATE');
@@ -324,6 +339,20 @@ export class AllProfilesPageComponent implements OnInit {
     } catch (e: any) {
       this.errorMessage = parseApiError(e);
     }
+  }
+
+  onCreateSale(p: ProfileWithContextDTO) {
+    this.selectedProfile = this.toAccountProfileDTO(p);
+    this.selectedAccount = p.account as any;
+    this.createSaleOpen = true;
+    this.closeMenu();
+  }
+
+  async onSaleDone() {
+    this.createSaleOpen = false;
+    this.selectedProfile = null;
+    this.selectedAccount = null;
+    await this.refresh();
   }
 
   onEditSale(p: ProfileWithContextDTO) {

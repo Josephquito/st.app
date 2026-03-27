@@ -189,18 +189,21 @@ export class CreateAccountModal implements OnChanges {
   // =========================
   private todayISO(): string {
     const now = new Date();
-    return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
+    // Hora local — no UTC
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   }
 
   private parseISODate(dateStr: string): Date | null {
     if (!dateStr) return null;
     const [y, m, d] = dateStr.split('-').map(Number);
     if (!y || !m || !d) return null;
-    return new Date(Date.UTC(y, m - 1, d)); // ← UTC
+    // Hora local — no UTC
+    return new Date(y, m - 1, d);
   }
 
   private toISODate(d: Date): string {
-    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+    // Hora local — no UTC
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
   private addDays(base: Date, days: number): Date {

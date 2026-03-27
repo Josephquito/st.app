@@ -76,15 +76,11 @@ export type UpdateStreamingAccountDto = {
   password?: string;
   durationDays?: number;
   purchaseDate?: string;
-  cutoffDate?: string;
-  totalCost?: string;
   notes?: string | null;
-  status?: StreamingAccountStatus;
 };
 
 export type RenewAccountDto = {
   purchaseDate: string;
-  cutoffDate: string;
   durationDays: number;
   totalCost: string;
 };
@@ -99,7 +95,6 @@ export type ReplacePaidDto = {
   email: string;
   password: string;
   purchaseDate: string;
-  cutoffDate: string;
   durationDays: number;
   totalCost: string;
   note?: string;

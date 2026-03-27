@@ -18,6 +18,7 @@ const STATUS_MAP: Record<string, StatusDisplay> = {
   NOT_APPLICABLE: { color: 'bg-base-content/30', label: 'N/A' },
   PENDING: { color: 'bg-error', label: 'Pendiente' },
   SENT: { color: 'bg-success', label: 'Enviado' },
+  PROSPECT: { color: 'bg-warning', label: 'Prospecto' },
 };
 
 @Pipe({ name: 'status', standalone: true })
