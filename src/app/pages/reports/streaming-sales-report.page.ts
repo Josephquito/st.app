@@ -18,6 +18,7 @@ import {
   CustomersService,
   CustomerDTO,
 } from '../../services/customers.service';
+import { todayISO, toISODate } from '../../utils/date.utils';
 
 type DateMode = 'RANGE' | 'DAY';
 
@@ -91,21 +92,14 @@ export class StreamingSalesReportPage {
   }
 
   private initDefaults() {
-    const now = new Date();
-    const end = this.toDateInput(now);
-    const start = new Date(now);
-    start.setDate(start.getDate() - 19);
+    const end = todayISO();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 19);
+    const start = toISODate(startDate);
 
-    this.from = this.toDateInput(start);
+    this.from = start;
     this.to = end;
     this.day = end;
-  }
-
-  private toDateInput(d: Date) {
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
   }
 
   async bootstrap() {

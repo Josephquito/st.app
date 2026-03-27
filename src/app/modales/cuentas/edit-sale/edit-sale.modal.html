@@ -39,28 +39,44 @@
 
         <div
           *ngIf="customerDropdownOpen && customerQuery.trim().length > 0"
-          class="absolute left-0 right-0 top-[72px] z-50 rounded-box border bg-base-100 shadow"
+          class="absolute left-0 right-0 top-[72px] z-50 rounded-box border bg-base-100 shadow overflow-hidden"
         >
-          <ul class="menu p-2">
+          <!-- Resultados con scroll vertical, máximo 5 visibles -->
+          <ul class="menu p-2 max-h-[15rem] overflow-y-auto overflow-x-hidden flex-nowrap">
             <li *ngFor="let c of customerMatches; trackBy: trackCustomer">
               <button
                 type="button"
                 class="justify-between"
                 (mousedown)="selectCustomer(c)"
               >
-                <span class="truncate">
+                <span class="truncate min-w-0">
                   {{ c.name }}
                   <span class="opacity-60" *ngIf="c.contact"
                     >· {{ c.contact }}</span
                   >
                 </span>
-                <span class="badge badge-ghost">Elegir</span>
+                <span class="badge badge-ghost shrink-0">Elegir</span>
               </button>
             </li>
             <li *ngIf="customerMatches.length === 0 && !customersLoading">
               <span class="opacity-50 text-sm"
                 >Sin resultados para "{{ customerQuery.trim() }}"</span
               >
+            </li>
+          </ul>
+
+          <!-- Botón crear siempre visible, fuera del scroll -->
+          <div class="divider my-0 px-2"></div>
+          <ul class="menu px-2 pb-2 pt-0">
+            <li>
+              <button
+                type="button"
+                class="justify-between"
+                (mousedown)="createCustomerOpen = true"
+              >
+                <span>+ Registrar nuevo cliente</span>
+                <span class="badge badge-neutral shrink-0">Nuevo</span>
+              </button>
             </li>
           </ul>
         </div>
@@ -120,6 +136,12 @@
         </div>
       </div>
     </div>
+
+  <app-create-customer-modal
+    [open]="createCustomerOpen"
+    (close)="createCustomerOpen = false"
+    (created)="onCustomerCreated($event)"
+  />
 
     <div class="modal-action">
       <button

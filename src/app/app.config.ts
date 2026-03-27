@@ -5,13 +5,14 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { routes } from './app.routes';
 import { authInterceptor } from './interceptors/auth.interceptor';
 import { companyScopeInterceptor } from './interceptors/company-scope.interceptor';
+import { timezoneInterceptor } from './interceptors/timezone.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
     provideHttpClient(
-      withInterceptors([authInterceptor, companyScopeInterceptor]),
+      withInterceptors([authInterceptor, companyScopeInterceptor, timezoneInterceptor]),
     ),
   ],
 };

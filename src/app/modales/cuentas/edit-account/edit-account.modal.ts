@@ -20,6 +20,13 @@ import {
 import { StreamingPlatformDTO } from '../../../services/streaming-platforms.service';
 import { CreateSupplierModal } from '../../suppliers/create-supplier/create-supplier.modal';
 import { parseApiError } from '../../../utils/error.utils';
+import {
+  todayISO,
+  parseISODate,
+  toISODate,
+  addDays,
+  addMonths,
+} from '../../../utils/date.utils';
 
 @Component({
   selector: 'app-edit-account-modal',
@@ -103,7 +110,7 @@ export class EditAccountModal implements OnChanges {
       this.supplierQuery = '';
     }
 
-    if (!this.purchaseDate) this.purchaseDate = this.todayISO();
+    if (!this.purchaseDate) this.purchaseDate = todayISO();
 
     this.correctCostValue = '';
     this.correctCostError = '';
@@ -168,18 +175,10 @@ export class EditAccountModal implements OnChanges {
     this.createSupplierOpen = true;
   }
 
-  async onSupplierCreated() {
+  async onSupplierCreated(supplier: SupplierDTO) {
     this.createSupplierOpen = false;
     await this.loadSuppliers();
-    const q = this.supplierQuery.trim().toLowerCase();
-    if (q) {
-      const found = this.suppliers.find(
-        (s) =>
-          (s.name ?? '').toLowerCase().includes(q) ||
-          (s.contact ?? '').toLowerCase().includes(q),
-      );
-      if (found) this.selectSupplier(found);
-    }
+    this.selectSupplier(supplier);
   }
 
   onSupplierEnter(event: Event) {
@@ -246,6 +245,12 @@ export class EditAccountModal implements OnChanges {
   // =========================
   // Fechas y período
   // =========================
+  private toDateInput(v: any): string {
+    if (!v) return '';
+    const datePart = String(v).split('T')[0];
+    return /^\d{4}-\d{2}-\d{2}$/.test(datePart) ? datePart : '';
+  }
+
   onPeriodMonthsChange(value: any) {
     const v = value === null ? null : Number(value);
     this.periodMonths =
@@ -266,69 +271,28 @@ export class EditAccountModal implements OnChanges {
     this.recalcCutoffDate();
   }
 
-  private parseISODate(dateStr: string): Date | null {
-    if (!dateStr) return null;
-    const [y, m, d] = dateStr.split('-').map(Number);
-    if (!y || !m || !d) return null;
-    return new Date(Date.UTC(y, m - 1, d)); // ← UTC
-  }
-
-  private toISODate(d: Date): string {
-    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
-  }
-
-  private addDays(base: Date, days: number): Date {
-    const d = new Date(base);
-    d.setUTCDate(d.getUTCDate() + days);
-    return d;
-  }
-
-  private addMonths(base: Date, months: number): Date {
-    const d = new Date(base);
-    const day = d.getUTCDate();
-    d.setUTCDate(1);
-    d.setUTCMonth(d.getUTCMonth() + months);
-    const lastDay = new Date(
-      Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0),
-    ).getUTCDate();
-    d.setUTCDate(Math.min(day, lastDay));
-    return d;
-  }
-
   private recalcCutoffDate() {
-    const base = this.parseISODate(this.purchaseDate);
+    const base = parseISODate(this.purchaseDate);
     if (!base) {
       this.cutoffDate = '';
       return;
     }
     const days = Number(this.periodDays);
     if (Number.isFinite(days) && days >= 1) {
-      this.cutoffDate = this.toISODate(this.addDays(base, days));
+      this.cutoffDate = toISODate(addDays(base, days));
       return;
     }
     if (this.periodMonths !== null) {
-      const end = this.addMonths(base, this.periodMonths);
-      this.cutoffDate = this.toISODate(end);
+      const end = addMonths(base, this.periodMonths);
+      this.cutoffDate = toISODate(end);
       return;
     }
     // Si no hay período nuevo, recalcula con durationDays actual de la cuenta
     if (this.account?.durationDays) {
-      this.cutoffDate = this.toISODate(
-        this.addDays(base, this.account.durationDays),
+      this.cutoffDate = toISODate(
+        addDays(base, this.account.durationDays),
       );
     }
-  }
-
-  private toDateInput(v: any): string {
-    if (!v) return '';
-    const d = new Date(v);
-    if (Number.isNaN(d.getTime())) return '';
-    // Usa UTC para evitar desplazamiento de timezone
-    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
-  }
-
-  private todayISO(): string {
-    return this.toISODate(new Date());
   }
 
   private getEffectiveDurationDays(): number {
@@ -338,9 +302,9 @@ export class EditAccountModal implements OnChanges {
 
     // Si el usuario seleccionó meses
     if (this.periodMonths !== null) {
-      const base = this.parseISODate(this.purchaseDate);
+      const base = parseISODate(this.purchaseDate);
       if (!base) return 0;
-      const end = this.addMonths(base, this.periodMonths);
+      const end = addMonths(base, this.periodMonths);
       return Math.max(
         1,
         Math.ceil((end.getTime() - base.getTime()) / (1000 * 60 * 60 * 24)),
@@ -419,7 +383,7 @@ export class EditAccountModal implements OnChanges {
   }
 
   onPurchaseDateChange() {
-    const base = this.parseISODate(this.purchaseDate);
+    const base = parseISODate(this.purchaseDate);
     if (!base) return;
 
     // Si el usuario seleccionó un período explícito, recalcula con ese
@@ -430,9 +394,7 @@ export class EditAccountModal implements OnChanges {
 
     // Si no hay período, recalcula con los durationDays actuales de la cuenta
     if (this.account?.durationDays) {
-      const end = new Date(base);
-      end.setUTCDate(end.getUTCDate() + this.account.durationDays);
-      this.cutoffDate = this.toISODate(end);
+      this.cutoffDate = toISODate(addDays(base, this.account.durationDays));
     }
   }
 }

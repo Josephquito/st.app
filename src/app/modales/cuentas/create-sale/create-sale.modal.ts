@@ -19,6 +19,13 @@ import {
   AccountProfileDTO,
 } from '../../../services/streaming-accounts.service';
 import { parseApiError } from '../../../utils/error.utils';
+import {
+  todayISO,
+  parseISODate,
+  toISODate,
+  addDays,
+  addMonths,
+} from '../../../utils/date.utils';
 import { CreateCustomerModal } from '../../customers/create-customer/create-customer.modal';
 
 type PeriodMonths = 1 | 3 | 6 | 12 | null;
@@ -68,7 +75,7 @@ export class CreateSaleModal implements OnChanges {
   async ngOnChanges() {
     this.errorMessage = '';
     if (this.open) {
-      if (!this.saleDate) this.saleDate = this.todayISO();
+      if (!this.saleDate) this.saleDate = todayISO();
       if (this.periodDays == null && this.periodMonths == null)
         this.periodDays = 30;
       this.recalcCutoffDate();
@@ -154,63 +161,18 @@ export class CreateSaleModal implements OnChanges {
     return c ? this.getCustomerLabel(c) : '';
   }
 
-  async onCustomerCreated() {
+  async onCustomerCreated(customer: CustomerDTO) {
     this.createCustomerOpen = false;
-    const q = this.customerQuery.trim();
-    if (q.length > 0) {
-      this.customersLoading = true;
-      try {
-        const res = await this.customersApi.findAll({ limit: 10, search: q });
-        this.customerMatches = res.data;
-        for (const c of res.data) {
-          if (!this.customers.find((x) => x.id === c.id))
-            this.customers.push(c);
-        }
-      } catch {
-        this.customerMatches = [];
-      } finally {
-        this.customersLoading = false;
-      }
-    }
+    if (!this.customers.find((x) => x.id === customer.id))
+      this.customers.push(customer);
+    this.selectCustomer(customer);
   }
 
   // =========================
   // Fechas y período
   // =========================
-  private todayISO(): string {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  }
-
-  private parseISODate(dateStr: string): Date | null {
-    if (!dateStr) return null;
-    const [y, m, d] = dateStr.split('-').map(Number);
-    if (!y || !m || !d) return null;
-    return new Date(y, m - 1, d); // ← hora local
-  }
-
-  private toISODate(d: Date): string {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }
-
-  private addDays(base: Date, days: number): Date {
-    const d = new Date(base);
-    d.setDate(d.getDate() + days);
-    return d;
-  }
-
-  private addMonths(base: Date, months: number): Date {
-    const d = new Date(base);
-    const day = d.getDate();
-    d.setDate(1);
-    d.setMonth(d.getMonth() + months);
-    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-    d.setDate(Math.min(day, lastDay));
-    return d;
-  }
-
   recalcCutoffDate() {
-    const base = this.parseISODate(this.saleDate);
+    const base = parseISODate(this.saleDate);
     if (!base) {
       this.cutoffDate = '';
       this.daysAssigned = 0;
@@ -220,13 +182,13 @@ export class CreateSaleModal implements OnChanges {
     const days = this.periodDays === null ? null : Number(this.periodDays);
     if (Number.isFinite(days as number) && (days as number) >= 1) {
       this.daysAssigned = days as number;
-      this.cutoffDate = this.toISODate(this.addDays(base, this.daysAssigned));
+      this.cutoffDate = toISODate(addDays(base, this.daysAssigned));
       return;
     }
 
     if (this.periodMonths !== null) {
-      const end = this.addMonths(base, this.periodMonths);
-      this.cutoffDate = this.toISODate(end);
+      const end = addMonths(base, this.periodMonths);
+      this.cutoffDate = toISODate(end);
       this.daysAssigned = Math.max(
         1,
         Math.ceil((end.getTime() - base.getTime()) / (1000 * 60 * 60 * 24)),
@@ -285,7 +247,7 @@ export class CreateSaleModal implements OnChanges {
     this.customerDropdownOpen = false;
     this.createCustomerOpen = false;
     this.salePrice = '';
-    this.saleDate = this.todayISO();
+    this.saleDate = todayISO();
     this.periodMonths = null;
     this.periodDays = 30;
     this.daysAssigned = 30;

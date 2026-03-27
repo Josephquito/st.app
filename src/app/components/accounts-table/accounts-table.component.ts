@@ -10,6 +10,7 @@ import { FormsModule } from '@angular/forms';
 import {
   StreamingAccountDTO,
   AccountProfileDTO,
+  StreamingAccountsService,
 } from '../../services/streaming-accounts.service';
 import {
   AlertPipe,
@@ -17,6 +18,7 @@ import {
   getProfileDotColor,
 } from '../../pipes/status.pipe';
 import { StreamingLabelDTO } from '../../services/streaming-labels.service';
+import { parseISODate, todayISO } from '../../utils/date.utils';
 
 type SortKey =
   | 'ALERT'
@@ -38,6 +40,7 @@ type SortDir = 'asc' | 'desc';
   templateUrl: './accounts-table.component.html',
 })
 export class AccountsTableComponent {
+  constructor(private api: StreamingAccountsService) {}
   private _accounts: StreamingAccountDTO[] = [];
 
   @Input() set accounts(value: StreamingAccountDTO[]) {
@@ -60,8 +63,10 @@ export class AccountsTableComponent {
   @Output() renewAccount = new EventEmitter<StreamingAccountDTO>();
   @Output() changePassword = new EventEmitter<StreamingAccountDTO>();
   @Output() deleteAccount = new EventEmitter<StreamingAccountDTO>();
-  @Output() changeStatus = new EventEmitter<StreamingAccountDTO>();
+  @Output() refreshAccounts = new EventEmitter<void>();
   @Output() loadMore = new EventEmitter<void>();
+
+  statusLoading = false;
 
   // ── Estado UI ─────────────────────────────────────────────────────────────
   menuOpen = false;
@@ -117,6 +122,23 @@ export class AccountsTableComponent {
     this.menuDirection = openUp ? 'up' : 'down';
     this.menuAccount = a;
     this.menuOpen = true;
+  }
+
+  async toggleStatus(account: StreamingAccountDTO) {
+    this.statusLoading = true;
+    try {
+      if (account.status === 'ACTIVE') {
+        await this.api.inactivate(account.id);
+      } else if (account.status === 'INACTIVE') {
+        await this.api.reactivate(account.id);
+      }
+      this.refreshAccounts.emit();
+    } catch (err) {
+      console.error('Error al cambiar estado de cuenta', err);
+    } finally {
+      this.statusLoading = false;
+      this.closeMenu();
+    }
   }
 
   closeMenu() {
@@ -187,9 +209,10 @@ export class AccountsTableComponent {
 
   daysRemaining(cutoffDate?: string | null): number | null {
     if (!cutoffDate) return null;
-    const d = new Date(cutoffDate);
-    if (isNaN(d.getTime())) return null;
-    return Math.ceil((d.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    const cutoff = parseISODate(cutoffDate);
+    if (!cutoff) return null;
+    const today = parseISODate(todayISO())!;
+    return Math.ceil((cutoff.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   }
 
   usedProfilesText(a: StreamingAccountDTO): string {
@@ -351,17 +374,9 @@ export class AccountsTableComponent {
     const sale = p.sales?.[0];
     if (!sale) return 'Vendido';
     if (sale.status === 'PAUSED') return 'Pausado';
-    const d = new Date(sale.cutoffDate);
-    const cutoff = new Date(
-      Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
-    );
-    const today = new Date(
-      Date.UTC(
-        new Date().getUTCFullYear(),
-        new Date().getUTCMonth(),
-        new Date().getUTCDate(),
-      ),
-    );
+    const cutoff = parseISODate(sale.cutoffDate);
+    const today = parseISODate(todayISO())!;
+    if (!cutoff) return 'Vendido';
     const days = Math.ceil(
       (cutoff.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
     );

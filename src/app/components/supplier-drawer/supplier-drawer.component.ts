@@ -16,6 +16,7 @@ import {
 } from '../../services/suppliers.service';
 import { AuthService } from '../../services/auth.service';
 import { parseApiError } from '../../utils/error.utils';
+import { parseISODate, todayISO } from '../../utils/date.utils';
 import { AlertPipe, StatusPipe } from '../../pipes/status.pipe';
 
 export type SupplierAccount = {
@@ -156,9 +157,10 @@ export class SupplierDrawerComponent implements OnChanges, OnDestroy {
 
   daysRemaining(date?: string | null): number | null {
     if (!date) return null;
-    const d = new Date(date);
-    if (isNaN(d.getTime())) return null;
-    return Math.ceil((d.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    const cutoff = parseISODate(date);
+    if (!cutoff) return null;
+    const today = parseISODate(todayISO())!;
+    return Math.ceil((cutoff.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   }
 
   alertBadgeClass(days: number | null): string {

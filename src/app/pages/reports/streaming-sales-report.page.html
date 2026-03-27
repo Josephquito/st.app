@@ -300,7 +300,7 @@
           <tbody>
             <tr *ngFor="let r of items" class="row-click" title="Ver detalles">
               <td class="no-wrap text-sm text-gray-500">
-                {{ r.saleDate ? (r.saleDate | date : 'mediumDate') : '—' }}
+                {{ r.saleDate ? (r.saleDate | date : 'dd/MM/yyyy' : 'UTC') : '—' }}
               </td>
 
               <td class="no-wrap">

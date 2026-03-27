@@ -10,6 +10,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   CustomersService,
+  CustomerDTO,
   CustomerSource,
 } from '../../../services/customers.service';
 import { parseApiError } from '../../../utils/error.utils';
@@ -25,7 +26,7 @@ export class CreateCustomerModal implements OnChanges {
 
   @Input() open = false;
   @Output() close = new EventEmitter<void>();
-  @Output() created = new EventEmitter<void>();
+  @Output() created = new EventEmitter<CustomerDTO>();
 
   loading = false;
   errorMessage = '';
@@ -96,7 +97,7 @@ export class CreateCustomerModal implements OnChanges {
     this.loading = true;
     this.errorMessage = '';
     try {
-      await this.api.create({
+      const customer = await this.api.create({
         name,
         contact,
         source: this.source || undefined,
@@ -105,7 +106,7 @@ export class CreateCustomerModal implements OnChanges {
         balance: this.balance.trim() || undefined,
       });
       this.reset();
-      this.created.emit();
+      this.created.emit(customer);
     } catch (e: any) {
       this.errorMessage = parseApiError(e);
     } finally {

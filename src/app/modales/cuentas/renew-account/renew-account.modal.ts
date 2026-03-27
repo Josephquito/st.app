@@ -13,6 +13,13 @@ import {
   StreamingAccountDTO,
 } from '../../../services/streaming-accounts.service';
 import { parseApiError } from '../../../utils/error.utils';
+import {
+  todayISO,
+  parseISODate,
+  toISODate,
+  addDays,
+  addMonths,
+} from '../../../utils/date.utils';
 
 type PeriodMonths = 1 | 3 | 6 | 12 | null;
 
@@ -50,21 +57,17 @@ export class RenewAccountModal implements OnChanges {
     if (this.open && this.account) {
       this.errorMessage = '';
 
-      const cutoff = this.account.cutoffDate
-        ? new Date(this.account.cutoffDate)
+      // Comparar solo por fecha local, sin hora
+      const cutoffDate = this.account.cutoffDate
+        ? parseISODate(this.account.cutoffDate)
         : null;
+      const todayDate = parseISODate(todayISO())!;
 
-      // Comparar solo por fecha UTC, no por timestamp
-      const todayUTC = new Date();
-      todayUTC.setUTCHours(0, 0, 0, 0);
-      const cutoffUTC = cutoff ? new Date(cutoff) : null;
-      if (cutoffUTC) cutoffUTC.setUTCHours(0, 0, 0, 0);
-
-      if (cutoffUTC && cutoffUTC >= todayUTC) {
-        this.purchaseDate = this.toISODate(cutoffUTC);
+      if (cutoffDate && cutoffDate >= todayDate) {
+        this.purchaseDate = toISODate(cutoffDate);
         this.isExtending = true;
       } else {
-        this.purchaseDate = this.todayISO();
+        this.purchaseDate = todayISO();
         this.isExtending = false;
       }
 
@@ -77,24 +80,8 @@ export class RenewAccountModal implements OnChanges {
   // =========================
   // Fechas y período
   // =========================
-  private todayISO(): string {
-    const now = new Date();
-    return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
-  }
-
-  private parseISODate(dateStr: string): Date | null {
-    if (!dateStr) return null;
-    const [y, m, d] = dateStr.split('-').map(Number);
-    if (!y || !m || !d) return null;
-    return new Date(Date.UTC(y, m - 1, d)); // ← UTC
-  }
-
-  private toISODate(d: Date): string {
-    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
-  }
-
   recalcCutoffDate() {
-    const base = this.parseISODate(this.purchaseDate);
+    const base = parseISODate(this.purchaseDate);
     if (!base) {
       this.cutoffDate = '';
       this.durationDays = 0;
@@ -104,16 +91,13 @@ export class RenewAccountModal implements OnChanges {
     const days = this.periodDays === null ? null : Number(this.periodDays);
     if (Number.isFinite(days as number) && (days as number) >= 1) {
       this.durationDays = days as number;
-      const end = new Date(base);
-      end.setDate(end.getDate() + this.durationDays);
-      this.cutoffDate = this.toISODate(end);
+      this.cutoffDate = toISODate(addDays(base, this.durationDays));
       return;
     }
 
     if (this.periodMonths !== null) {
-      const end = new Date(base);
-      end.setMonth(end.getMonth() + this.periodMonths);
-      this.cutoffDate = this.toISODate(end);
+      const end = addMonths(base, this.periodMonths);
+      this.cutoffDate = toISODate(end);
       this.durationDays = Math.max(
         1,
         Math.ceil((end.getTime() - base.getTime()) / (1000 * 60 * 60 * 24)),
@@ -167,7 +151,7 @@ export class RenewAccountModal implements OnChanges {
     this.errorMessage = '';
     this.loading = false;
     this.totalCost = '';
-    this.purchaseDate = this.todayISO();
+    this.purchaseDate = todayISO();
     this.periodMonths = null;
     this.periodDays = 30;
     this.durationDays = 30;

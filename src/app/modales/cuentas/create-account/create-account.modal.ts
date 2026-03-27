@@ -16,6 +16,13 @@ import {
 } from '../../../services/suppliers.service';
 import { StreamingPlatformDTO } from '../../../services/streaming-platforms.service';
 import { parseApiError } from '../../../utils/error.utils';
+import {
+  todayISO,
+  parseISODate,
+  toISODate,
+  addDays,
+  addMonths,
+} from '../../../utils/date.utils';
 import { CreateSupplierModal } from '../../suppliers/create-supplier/create-supplier.modal';
 
 @Component({
@@ -74,7 +81,7 @@ export class CreateAccountModal implements OnChanges {
       }
 
       if (!this.purchaseDate) {
-        this.purchaseDate = this.todayISO();
+        this.purchaseDate = todayISO();
       }
 
       this.recalcCutoffDate();
@@ -143,19 +150,10 @@ export class CreateAccountModal implements OnChanges {
     this.createSupplierOpen = true;
   }
 
-  async onSupplierCreated() {
+  async onSupplierCreated(supplier: SupplierDTO) {
     this.createSupplierOpen = false;
     await this.loadSuppliers();
-    // Auto-seleccionar el recién creado buscando por el query actual
-    const q = this.supplierQuery.trim().toLowerCase();
-    if (q) {
-      const found = this.suppliers.find(
-        (s) =>
-          (s.name ?? '').toLowerCase().includes(q) ||
-          (s.contact ?? '').toLowerCase().includes(q),
-      );
-      if (found) this.selectSupplier(found);
-    }
+    this.selectSupplier(supplier);
   }
 
   onSupplierEnter(event: Event) {
@@ -187,54 +185,19 @@ export class CreateAccountModal implements OnChanges {
   // =========================
   // Fechas y período
   // =========================
-  private todayISO(): string {
-    const now = new Date();
-    // Hora local — no UTC
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  }
-
-  private parseISODate(dateStr: string): Date | null {
-    if (!dateStr) return null;
-    const [y, m, d] = dateStr.split('-').map(Number);
-    if (!y || !m || !d) return null;
-    // Hora local — no UTC
-    return new Date(y, m - 1, d);
-  }
-
-  private toISODate(d: Date): string {
-    // Hora local — no UTC
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }
-
-  private addDays(base: Date, days: number): Date {
-    const d = new Date(base);
-    d.setDate(d.getDate() + days);
-    return d;
-  }
-
-  private addMonths(base: Date, months: number): Date {
-    const d = new Date(base);
-    const day = d.getDate();
-    d.setDate(1);
-    d.setMonth(d.getMonth() + months);
-    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-    d.setDate(Math.min(day, lastDay));
-    return d;
-  }
-
   recalcCutoffDate() {
-    const base = this.parseISODate(this.purchaseDate);
+    const base = parseISODate(this.purchaseDate);
     if (!base) {
       this.cutoffDate = '';
       return;
     }
     const days = Number(this.periodDays);
     if (Number.isFinite(days) && days >= 1) {
-      this.cutoffDate = this.toISODate(this.addDays(base, days));
+      this.cutoffDate = toISODate(addDays(base, days));
       return;
     }
     if (this.periodMonths !== null) {
-      this.cutoffDate = this.toISODate(this.addMonths(base, this.periodMonths));
+      this.cutoffDate = toISODate(addMonths(base, this.periodMonths));
       return;
     }
     this.cutoffDate = '';
@@ -298,7 +261,7 @@ export class CreateAccountModal implements OnChanges {
     this.email = '';
     this.password = '';
     this.profilesTotal = 5;
-    this.purchaseDate = this.todayISO();
+    this.purchaseDate = todayISO();
     this.periodMonths = 1;
     this.periodDays = null;
     this.totalCost = '0';

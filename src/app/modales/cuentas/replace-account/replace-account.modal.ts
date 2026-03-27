@@ -13,6 +13,13 @@ import {
   StreamingAccountDTO,
 } from '../../../services/streaming-accounts.service';
 import { parseApiError } from '../../../utils/error.utils';
+import {
+  todayISO,
+  parseISODate,
+  toISODate,
+  addDays,
+  addMonths,
+} from '../../../utils/date.utils';
 
 type ReplaceMode = 'credentials' | 'paid' | 'inventory' | null;
 type PeriodMonths = 1 | 3 | 6 | 12 | null;
@@ -59,7 +66,7 @@ export class ReplaceAccountModal implements OnChanges {
   ngOnChanges() {
     if (this.open) {
       this.errorMessage = '';
-      if (!this.purchaseDate) this.purchaseDate = this.todayISO();
+      if (!this.purchaseDate) this.purchaseDate = todayISO();
       if (this.periodDays == null) this.periodDays = 30;
       this.recalcCutoffDate();
     }
@@ -83,7 +90,7 @@ export class ReplaceAccountModal implements OnChanges {
   }
 
   recalcCutoffDate() {
-    const base = this.parseISODate(this.todayISO());
+    const base = parseISODate(todayISO());
     if (!base) {
       this.cutoffDate = '';
       this.durationDays = 0;
@@ -93,16 +100,13 @@ export class ReplaceAccountModal implements OnChanges {
     const days = this.periodDays === null ? null : Number(this.periodDays);
     if (Number.isFinite(days as number) && (days as number) >= 1) {
       this.durationDays = days as number;
-      const end = new Date(base);
-      end.setDate(end.getDate() + this.durationDays);
-      this.cutoffDate = this.toISODate(end);
+      this.cutoffDate = toISODate(addDays(base, this.durationDays));
       return;
     }
 
     if (this.periodMonths !== null) {
-      const end = new Date(base);
-      end.setMonth(end.getMonth() + this.periodMonths);
-      this.cutoffDate = this.toISODate(end);
+      const end = addMonths(base, this.periodMonths);
+      this.cutoffDate = toISODate(end);
       this.durationDays = Math.max(
         1,
         Math.ceil((end.getTime() - base.getTime()) / (1000 * 60 * 60 * 24)),
@@ -134,21 +138,6 @@ export class ReplaceAccountModal implements OnChanges {
     this.recalcCutoffDate();
   }
 
-  private parseISODate(dateStr: string): Date | null {
-    if (!dateStr) return null;
-    const [y, m, d] = dateStr.split('-').map(Number);
-    if (!y || !m || !d) return null;
-    return new Date(Date.UTC(y, m - 1, d)); // ← UTC
-  }
-
-  private toISODate(d: Date): string {
-    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
-  }
-
-  private todayISO(): string {
-    return this.toISODate(new Date()); // ya queda UTC al usar toISODate corregido
-  }
-
   // =========================
   // Modal
   // =========================
@@ -160,7 +149,7 @@ export class ReplaceAccountModal implements OnChanges {
     this.password = '';
     this.note = '';
     this.totalCost = '';
-    this.purchaseDate = this.todayISO();
+    this.purchaseDate = todayISO();
     this.periodMonths = null;
     this.periodDays = 30;
     this.durationDays = 30;
@@ -223,7 +212,7 @@ export class ReplaceAccountModal implements OnChanges {
         await this.api.replacePaid(this.account.id, {
           email: this.email.trim(),
           password: this.password,
-          purchaseDate: this.todayISO(), // ← directo
+          purchaseDate: todayISO(), // ← directo
           durationDays: this.durationDays,
           totalCost: this.totalCost,
           note: this.note.trim() || undefined,

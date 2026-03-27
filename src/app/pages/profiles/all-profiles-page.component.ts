@@ -13,6 +13,7 @@ import {
   StreamingSaleDTO,
 } from '../../services/streaming-sales.service';
 import { parseApiError } from '../../utils/error.utils';
+import { parseISODate, todayISO } from '../../utils/date.utils';
 import { AlertPipe, StatusPipe } from '../../pipes/status.pipe';
 import { EditSaleModal } from '../../modales/cuentas/edit-sale/edit-sale.modal';
 import { RenewSaleModal } from '../../modales/cuentas/renew-sale/renew-sale.modal';
@@ -176,9 +177,10 @@ export class AllProfilesPageComponent implements OnInit {
 
   private alertRank(cutoffDate: string | null) {
     if (!cutoffDate) return { group: 3, within: 0 };
-    const days = Math.ceil(
-      (new Date(cutoffDate).getTime() - Date.now()) / 86400000,
-    );
+    const cutoff = parseISODate(cutoffDate);
+    if (!cutoff) return { group: 3, within: 0 };
+    const today = parseISODate(todayISO())!;
+    const days = Math.ceil((cutoff.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     if (days < 0) return { group: 0, within: Math.abs(days) };
     if (days === 0) return { group: 1, within: 0 };
     return { group: 2, within: days };

@@ -1,7 +1,10 @@
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SuppliersService } from '../../../services/suppliers.service';
+import {
+  SuppliersService,
+  SupplierDTO,
+} from '../../../services/suppliers.service';
 import { parseApiError } from '../../../utils/error.utils';
 
 @Component({
@@ -15,7 +18,7 @@ export class CreateSupplierModal {
 
   @Input() open = false;
   @Output() close = new EventEmitter<void>();
-  @Output() created = new EventEmitter<void>();
+  @Output() created = new EventEmitter<SupplierDTO>();
 
   loading = false;
   errorMessage = '';
@@ -51,13 +54,13 @@ export class CreateSupplierModal {
     this.loading = true;
     this.errorMessage = '';
     try {
-      await this.api.create({
+      const supplier = await this.api.create({
         name,
         contact,
         notes: this.notes.trim() || undefined,
       });
       this.reset();
-      this.created.emit();
+      this.created.emit(supplier);
     } catch (e: any) {
       this.errorMessage = parseApiError(e);
     } finally {

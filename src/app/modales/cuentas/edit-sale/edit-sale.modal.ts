@@ -18,13 +18,20 @@ import {
 } from '../../../services/customers.service';
 import { StreamingAccountDTO } from '../../../services/streaming-accounts.service';
 import { parseApiError } from '../../../utils/error.utils';
+import {
+  parseISODate,
+  toISODate,
+  addDays,
+  addMonths,
+} from '../../../utils/date.utils';
+import { CreateCustomerModal } from '../../customers/create-customer/create-customer.modal';
 
 type PeriodMonths = 1 | 3 | 6 | 12 | null;
 
 @Component({
   selector: 'app-edit-sale-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CreateCustomerModal],
   templateUrl: './edit-sale.modal.html',
 })
 export class EditSaleModal implements OnChanges {
@@ -47,6 +54,7 @@ export class EditSaleModal implements OnChanges {
   customerQuery = '';
   customerDropdownOpen = false;
   customerMatches: CustomerDTO[] = [];
+  createCustomerOpen = false;
 
   salePrice = '';
   saleDate = '';
@@ -140,6 +148,13 @@ export class EditSaleModal implements OnChanges {
     this.customerMatches = [];
   }
 
+  onCustomerCreated(customer: CustomerDTO) {
+    this.createCustomerOpen = false;
+    if (!this.customers.find((x) => x.id === customer.id))
+      this.customers.push(customer);
+    this.selectCustomer(customer);
+  }
+
   onCustomerBlur() {
     setTimeout(() => {
       this.customerDropdownOpen = false;
@@ -174,19 +189,8 @@ export class EditSaleModal implements OnChanges {
   // =========================
   // Fechas y período
   // =========================
-  private parseISODate(dateStr: string): Date | null {
-    if (!dateStr) return null;
-    const [y, m, d] = dateStr.split('-').map(Number);
-    if (!y || !m || !d) return null;
-    return new Date(Date.UTC(y, m - 1, d)); // ← UTC
-  }
-
-  private toISODate(d: Date): string {
-    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
-  }
-
   recalcCutoffDate() {
-    const base = this.parseISODate(this.saleDate);
+    const base = parseISODate(this.saleDate);
     if (!base) {
       this.cutoffDate = '';
       this.daysAssigned = 0;
@@ -196,16 +200,13 @@ export class EditSaleModal implements OnChanges {
     const days = this.periodDays === null ? null : Number(this.periodDays);
     if (Number.isFinite(days as number) && (days as number) >= 1) {
       this.daysAssigned = days as number;
-      const end = new Date(base);
-      end.setDate(end.getDate() + this.daysAssigned);
-      this.cutoffDate = this.toISODate(end);
+      this.cutoffDate = toISODate(addDays(base, this.daysAssigned));
       return;
     }
 
     if (this.periodMonths !== null) {
-      const end = new Date(base);
-      end.setMonth(end.getMonth() + this.periodMonths);
-      this.cutoffDate = this.toISODate(end);
+      const end = addMonths(base, this.periodMonths);
+      this.cutoffDate = toISODate(end);
       this.daysAssigned = Math.max(
         1,
         Math.ceil((end.getTime() - base.getTime()) / (1000 * 60 * 60 * 24)),

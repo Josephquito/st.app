@@ -1,4 +1,5 @@
 import { Pipe, PipeTransform } from '@angular/core';
+import { parseISODate, todayISO } from '../utils/date.utils';
 
 export interface StatusDisplay {
   color: string;
@@ -60,21 +61,13 @@ export class AlertPipe implements PipeTransform {
     status: string = '',
   ): AlertDisplay {
     if (!cutoffDate) return { badgeClass: 'badge-ghost', label: '—' };
-    const d = new Date(cutoffDate);
-    if (isNaN(d.getTime())) return { badgeClass: 'badge-ghost', label: '—' };
+    const cutoff = parseISODate(cutoffDate);
+    if (!cutoff) return { badgeClass: 'badge-ghost', label: '—' };
 
-    // cutoffDate viene en UTC, normalizamos solo la fecha UTC
-    const cutoff = Date.UTC(
-      d.getUTCFullYear(),
-      d.getUTCMonth(),
-      d.getUTCDate(),
+    const today = parseISODate(todayISO())!;
+    const days = Math.ceil(
+      (cutoff.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
     );
-
-    // today usa fecha LOCAL del usuario, no UTC
-    const now = new Date();
-    const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-
-    const days = Math.ceil((cutoff - today) / (1000 * 60 * 60 * 24));
     return getAlertDisplay(days, status);
   }
 }
@@ -117,14 +110,9 @@ export function getProfileDotColor(
 
   // ACTIVE — color según días restantes
   if (!cutoffDate) return 'bg-success';
-  const d = new Date(cutoffDate);
-  const cutoff = new Date(
-    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
-  );
-  const now = new Date();
-  const today = new Date(
-    Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()),
-  );
+  const cutoff = parseISODate(cutoffDate);
+  if (!cutoff) return 'bg-success';
+  const today = parseISODate(todayISO())!;
 
   const days = Math.ceil(
     (cutoff.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),

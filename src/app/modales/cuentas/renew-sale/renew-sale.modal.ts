@@ -14,6 +14,13 @@ import {
 } from '../../../services/streaming-sales.service';
 import { StreamingAccountDTO } from '../../../services/streaming-accounts.service';
 import { parseApiError } from '../../../utils/error.utils';
+import {
+  todayISO,
+  parseISODate,
+  toISODate,
+  addDays,
+  addMonths,
+} from '../../../utils/date.utils';
 
 type PeriodMonths = 1 | 3 | 6 | 12 | null;
 
@@ -64,24 +71,8 @@ export class RenewSaleModal implements OnChanges {
   // =========================
   // Fechas y período
   // =========================
-  private todayISO(): string {
-    const now = new Date();
-    return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
-  }
-
-  private parseISODate(dateStr: string): Date | null {
-    if (!dateStr) return null;
-    const [y, m, d] = dateStr.split('-').map(Number);
-    if (!y || !m || !d) return null;
-    return new Date(Date.UTC(y, m - 1, d)); // ← UTC
-  }
-
-  private toISODate(d: Date): string {
-    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
-  }
-
   recalcCutoffDate() {
-    const base = this.parseISODate(this.todayISO());
+    const base = parseISODate(todayISO());
     if (!base) {
       this.cutoffDate = '';
       this.daysAssigned = 0;
@@ -91,16 +82,13 @@ export class RenewSaleModal implements OnChanges {
     const days = this.periodDays === null ? null : Number(this.periodDays);
     if (Number.isFinite(days as number) && (days as number) >= 1) {
       this.daysAssigned = days as number;
-      const end = new Date(base);
-      end.setDate(end.getDate() + this.daysAssigned);
-      this.cutoffDate = this.toISODate(end);
+      this.cutoffDate = toISODate(addDays(base, this.daysAssigned));
       return;
     }
 
     if (this.periodMonths !== null) {
-      const end = new Date(base);
-      end.setMonth(end.getMonth() + this.periodMonths);
-      this.cutoffDate = this.toISODate(end);
+      const end = addMonths(base, this.periodMonths);
+      this.cutoffDate = toISODate(end);
       this.daysAssigned = Math.max(
         1,
         Math.ceil((end.getTime() - base.getTime()) / (1000 * 60 * 60 * 24)),
@@ -177,7 +165,7 @@ export class RenewSaleModal implements OnChanges {
     this.loading = true;
     try {
       await this.api.renew(this.sale!.id, {
-        saleDate: this.todayISO(),
+        saleDate: todayISO(),
         daysAssigned: this.daysAssigned,
         salePrice: cleanPrice,
       });

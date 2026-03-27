@@ -358,12 +358,21 @@
           Editar cuenta
         </button>
       </li>
-      <li *ngIf="canUpdate">
+      <li
+        *ngIf="
+          canUpdate &&
+          menuAccount!.status !== 'EXPIRED' &&
+          menuAccount!.status !== 'DELETED'
+        "
+      >
         <button
           type="button"
-          (click)="changeStatus.emit(menuAccount!); closeMenu()"
+          [disabled]="statusLoading"
+          (click)="toggleStatus(menuAccount!)"
         >
-          Cambiar estado
+          <span *ngIf="statusLoading">...</span>
+          <span *ngIf="!statusLoading && menuAccount!.status === 'ACTIVE'">Inactivar cuenta</span>
+          <span *ngIf="!statusLoading && menuAccount!.status === 'INACTIVE'">Reactivar cuenta</span>
         </button>
       </li>
       <li *ngIf="canDelete">
