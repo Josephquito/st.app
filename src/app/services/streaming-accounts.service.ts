@@ -132,11 +132,11 @@ export class StreamingAccountsService {
   private http = inject(HttpClient);
   private base = `${environment.apiUrl}/streaming-accounts`;
 
-  findAll(limit = 100): Promise<StreamingAccountDTO[]> {
+  findAll(limit = 100, platformId?: number): Promise<StreamingAccountDTO[]> {
+    const params: Record<string, string> = { limit: limit.toString() };
+    if (platformId) params['platformId'] = platformId.toString();
     return firstValueFrom(
-      this.http.get<StreamingAccountDTO[]>(this.base, {
-        params: { limit: limit.toString() },
-      }),
+      this.http.get<StreamingAccountDTO[]>(this.base, { params }),
     );
   }
 

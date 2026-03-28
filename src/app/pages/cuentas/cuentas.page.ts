@@ -127,16 +127,7 @@ export class CuentasPage implements OnInit {
     this.load();
   }
 
-  private updateFilteredAccounts() {
-    if (!this.activePlatformId) {
-      this.filteredAccounts = [...this.accounts];
-    } else {
-      this.filteredAccounts = this.accounts.filter(
-        (a) => (a.platform?.id ?? a.platformId) === this.activePlatformId,
-      );
-    }
-  }
-
+  // En load(): pasar platformId al fetch y quitar el filtro frontend
   async load() {
     this.loading = true;
     this.errorMessage = '';
@@ -146,7 +137,10 @@ export class CuentasPage implements OnInit {
           ? this.platformsApi.findAll()
           : Promise.resolve([]),
         this.canAccountsRead
-          ? this.accountsApi.findAll(this.currentLimit)
+          ? this.accountsApi.findAll(
+              this.currentLimit,
+              this.activePlatformId ?? undefined, // ← pasa el filtro
+            )
           : Promise.resolve([]),
       ]);
       this.platforms = platforms;
@@ -160,7 +154,7 @@ export class CuentasPage implements OnInit {
         this.activePlatformId = null;
       }
 
-      this.updateFilteredAccounts();
+      this.filteredAccounts = [...this.accounts]; // ← ya viene filtrado del backend
       await this.loadLabels();
     } catch (e: any) {
       this.errorMessage = parseApiError(e);
@@ -186,7 +180,8 @@ export class CuentasPage implements OnInit {
 
   onFilterChange(id: number | null) {
     this.activePlatformId = id;
-    this.updateFilteredAccounts();
+    this.currentLimit = 100; // ← resetea el límite al cambiar plataforma
+    this.load(); // ← recarga desde backend con el nuevo filtro
     this.loadLabels();
   }
   openCreatePlatform() {
