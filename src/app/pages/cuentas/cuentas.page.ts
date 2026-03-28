@@ -180,10 +180,10 @@ export class CuentasPage implements OnInit {
 
   onFilterChange(id: number | null) {
     this.activePlatformId = id;
-    this.currentLimit = 100; // ← resetea el límite al cambiar plataforma
-    this.load(); // ← recarga desde backend con el nuevo filtro
-    this.loadLabels();
+    this.currentLimit = 100;
+    this.load(); // load() ya llama loadLabels() adentro
   }
+
   openCreatePlatform() {
     this.closeAll();
     this.createPlatformOpen = true;
