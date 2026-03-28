@@ -8,12 +8,12 @@ import {
 import { CompanyContextService } from '../../services/company-context.service';
 import { parseApiError } from '../../utils/error.utils';
 import { ConfirmActionModal } from '../../modales/confirmacion/confirm-action/confirm-action.modal';
-import { environment } from '../../../environments/environment';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-settings-page',
   standalone: true,
-  imports: [CommonModule, ConfirmActionModal],
+  imports: [CommonModule, ConfirmActionModal, RouterLink],
   templateUrl: './settings.page.html',
   styleUrls: ['./settings.page.css'],
 })

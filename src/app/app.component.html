@@ -86,9 +86,14 @@
       <div *ngIf="isLoggedIn" class="relative">
         <button
           type="button"
-          class="btn btn-ghost btn-sm gap-1"
+          class="btn btn-ghost btn-sm gap-2"
           (click)="toggleUserMenu($event)"
         >
+          <div class="avatar placeholder">
+            <div class="bg-neutral text-neutral-content rounded-full w-7">
+              <span class="text-xs">{{ displayName[0].toUpperCase() }}</span>
+            </div>
+          </div>
           <span class="text-sm opacity-70">{{ displayName }}</span>
           <svg
             class="h-4 w-4 opacity-70"
@@ -105,31 +110,61 @@
 
         <ul
           *ngIf="userMenuOpen"
-          class="absolute right-0 top-full mt-2 menu p-3 shadow-lg bg-base-100 rounded-box w-64 border border-base-200 z-[9999]"
+          class="absolute right-0 top-full mt-2 p-2 shadow-lg bg-base-100 rounded-box w-64 border border-base-200 z-[9999]"
           (click)="$event.stopPropagation()"
         >
-          <li class="mb-1">
-            <span class="text-xs uppercase opacity-60">Empresa actual</span>
+          <!-- Info usuario -->
+          <li class="px-3 py-2">
+            <div class="flex items-center gap-3">
+              <div class="avatar placeholder">
+                <div class="bg-neutral text-neutral-content rounded-full w-9">
+                  <span class="text-sm">{{
+                    displayName[0].toUpperCase()
+                  }}</span>
+                </div>
+              </div>
+              <div class="min-w-0">
+                <div class="font-semibold text-sm truncate">
+                  {{ displayName }}
+                </div>
+                <div class="text-xs opacity-50 truncate">
+                  {{ hasCompany ? activeCompanyName : "Sin empresa" }}
+                </div>
+              </div>
+            </div>
           </li>
-          <li>
-            <span class="pointer-events-none font-semibold">
-              {{ hasCompany ? activeCompanyName : "Sin empresa seleccionada" }}
-            </span>
-          </li>
-          <div class="divider my-2"></div>
+
+          <div class="divider my-1"></div>
+
+          <!-- Configuración -->
           <li *ngIf="hasCompany">
             <button
               type="button"
-              class="py-2"
+              class="flex items-center gap-2 w-full px-3 py-2 rounded-lg hover:bg-base-200 text-sm transition-colors"
+              (click)="goToSettingsFromMenu()"
+            >
+              Configuración
+            </button>
+          </li>
+
+          <!-- Cambiar empresa -->
+          <li *ngIf="hasCompany">
+            <button
+              type="button"
+              class="flex items-center gap-2 w-full px-3 py-2 rounded-lg hover:bg-base-200 text-sm transition-colors"
               (click)="changeCompanyFromMenu()"
             >
               Cambiar empresa
             </button>
           </li>
+
+          <div class="divider my-1"></div>
+
+          <!-- Cerrar sesión -->
           <li>
             <button
               type="button"
-              class="py-2 text-error"
+              class="flex items-center gap-2 w-full px-3 py-2 rounded-lg hover:bg-error/10 text-error text-sm transition-colors"
               (click)="logoutFromMenu()"
             >
               Cerrar sesión
@@ -263,13 +298,30 @@
 
   <div *ngIf="isLoggedIn" class="mt-4 px-3">
     <div class="divider my-2"></div>
-    <div class="text-xs uppercase opacity-60 mb-2">Cuenta</div>
-    <div class="mb-3">
-      <div class="text-xs opacity-70">Empresa actual</div>
-      <div class="font-semibold">
-        {{ hasCompany ? activeCompanyName : "Sin empresa seleccionada" }}
+
+    <div class="flex items-center gap-3 mb-3">
+      <div class="avatar placeholder">
+        <div class="bg-neutral text-neutral-content rounded-full w-9">
+          <span class="text-sm">{{ displayName[0].toUpperCase() }}</span>
+        </div>
+      </div>
+      <div class="min-w-0">
+        <div class="font-semibold text-sm truncate">{{ displayName }}</div>
+        <div class="text-xs opacity-50 truncate">
+          {{ hasCompany ? activeCompanyName : "Sin empresa seleccionada" }}
+        </div>
       </div>
     </div>
+
+    <button
+      *ngIf="hasCompany"
+      type="button"
+      class="mobile-link"
+      (click)="goToSettings()"
+    >
+      Configuración
+    </button>
+
     <button
       *ngIf="hasCompany"
       type="button"
@@ -278,6 +330,7 @@
     >
       Cambiar empresa
     </button>
+
     <button type="button" class="mobile-link mobile-logout" (click)="logout()">
       Cerrar sesión
     </button>

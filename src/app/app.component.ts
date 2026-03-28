@@ -149,4 +149,14 @@ export class AppComponent implements OnInit {
     this.navVisible = delta < 0;
     this.lastScrollTop = st <= 0 ? 0 : st;
   }
+
+  goToSettings() {
+    this.router.navigate(['/settings']);
+    this.closeMobileMenu();
+  }
+
+  goToSettingsFromMenu() {
+    this.closeUserMenu();
+    this.router.navigate(['/settings']);
+  }
 }
