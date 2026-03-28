@@ -92,5 +92,11 @@ export const routes: Routes = [
         (m) => m.AllProfilesPageComponent,
       ),
   },
+  {
+    path: 'settings',
+    canActivate: [CompanySelectedGuard],
+    loadComponent: () =>
+      import('./pages/settings/settings.page').then((m) => m.SettingsPage),
+  },
   { path: '**', redirectTo: 'companies' },
 ];
