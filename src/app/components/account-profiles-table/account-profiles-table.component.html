@@ -253,7 +253,10 @@
 </div>
 
 <!-- Agregar slot -->
-<div class="mt-3 border-t border-base-200 pt-3">
+<div
+  class="mt-3 border-t border-base-200 pt-3"
+  *ngIf="accountStatus === 'ACTIVE'"
+>
   <button
     class="btn btn-ghost w-full border border-dashed border-base-300 hover:text-base-content hover:border-base-content/30"
     type="button"
