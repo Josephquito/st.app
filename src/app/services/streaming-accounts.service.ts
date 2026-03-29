@@ -26,8 +26,8 @@ export type AccountProfileDTO = {
   profileNo: number;
   status: ProfileStatus;
   labelId?: number | null;
-  label?: ProfileLabelDTO | null; // ← agrega
-  sales?: { cutoffDate: string; status: string }[];
+  label?: ProfileLabelDTO | null;
+  sales?: { cutoffDate: string; status: 'ACTIVE' | 'PAUSED' | 'EXPIRED' }[]; // ← agrega EXPIRED
   createdAt?: string;
   updatedAt?: string;
 };
