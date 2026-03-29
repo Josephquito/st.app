@@ -360,7 +360,6 @@ export class AccountsTableComponent {
 
   profileDotClass(p: AccountProfileDTO): string {
     const sale = p.sales?.[0];
-    console.log(p.profileNo, sale?.cutoffDate, sale?.status);
     return getProfileDotColor(
       p.status,
       sale?.status ?? null,
