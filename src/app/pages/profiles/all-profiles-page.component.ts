@@ -24,6 +24,7 @@ import {
 } from '../../services/streaming-platforms.service';
 import { PlatformsTabsComponent } from '../../components/platforms-tabs/platforms-tabs.component';
 import { CreateSaleModal } from '../../modales/cuentas/create-sale/create-sale.modal';
+import { TransferSaleModal } from '../../modales/cuentas/transfer-sale/transfer-sale.modal';
 
 type SortKey = 'PLATFORM' | 'CUTOFF' | 'ALERT' | 'STATUS' | null;
 type SortDir = 'asc' | 'desc';
@@ -41,6 +42,7 @@ type SortDir = 'asc' | 'desc';
     ConfirmActionModal,
     PlatformsTabsComponent,
     CreateSaleModal,
+    TransferSaleModal,
   ],
   templateUrl: './all-profiles-page.component.html',
   styleUrl: './all-profiles-page.component.css',
@@ -85,13 +87,27 @@ export class AllProfilesPageComponent implements OnInit {
   platformsList: StreamingPlatformDTO[] = [];
   activePlatformId: number | null = null;
 
-  private toAccountProfileDTO(p: ProfileWithContextDTO): AccountProfileDTO {
+  allAccounts: StreamingAccountDTO[] = [];
+  transferSaleOpen = false;
+  profileToTransfer: ProfileWithContextDTO | null = null;
+  saleToTransfer: StreamingSaleDTO | null = null;
+
+  public toAccountProfileDTO(p: ProfileWithContextDTO): AccountProfileDTO {
     const { account, sales, label, ...profile } = p as any;
 
     return {
       ...profile,
       accountId: account.id,
     } as AccountProfileDTO;
+  }
+
+  get originAccountForTransfer(): StreamingAccountDTO | null {
+    if (!this.profileToTransfer) return null;
+    return (
+      this.allAccounts.find(
+        (a) => a.id === this.profileToTransfer!.account.id,
+      ) ?? null
+    );
   }
 
   get canSell() {
@@ -110,12 +126,14 @@ export class AllProfilesPageComponent implements OnInit {
     this.loading = true;
     this.errorMessage = '';
     try {
-      const [data, platforms] = await Promise.all([
+      const [data, platforms, accounts] = await Promise.all([
         this.accountsApi.findAllProfiles(),
         this.platformsApi.findAll(),
+        this.accountsApi.findAll(), // ← agrega
       ]);
       this.profiles = data;
       this.platformsList = platforms;
+      this.allAccounts = accounts; // ← agrega
       this.recalc();
     } catch (e: any) {
       this.errorMessage = parseApiError(e);
@@ -569,5 +587,21 @@ export class AllProfilesPageComponent implements OnInit {
   onPlatformTabChange(id: number | null) {
     this.activePlatformId = id;
     this.recalc();
+  }
+
+  onTransferProfile(p: ProfileWithContextDTO) {
+    const sale = this.getSale(p);
+    if (!sale) return;
+    this.profileToTransfer = p;
+    this.saleToTransfer = sale;
+    this.transferSaleOpen = true;
+    this.closeMenu();
+  }
+
+  async onTransferDone() {
+    this.transferSaleOpen = false;
+    this.profileToTransfer = null;
+    this.saleToTransfer = null;
+    await this.refresh();
   }
 }

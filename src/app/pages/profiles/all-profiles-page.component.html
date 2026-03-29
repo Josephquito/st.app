@@ -503,6 +503,14 @@
               Reanudar venta
             </button>
           </li>
+          <li>
+            <button
+              type="button"
+              (click)="onTransferProfile(menuProfile!); closeMenu()"
+            >
+              Trasladar venta
+            </button>
+          </li>
 
           <li *ngIf="getSaleStatus(menuProfile!) === 'PAUSED'">
             <button
@@ -554,5 +562,18 @@
     [loading]="loading"
     (confirm)="confirmEmpty()"
     (cancel)="cancelEmpty()"
+  />
+  <app-transfer-sale-modal
+    [open]="transferSaleOpen"
+    [profile]="
+      profileToTransfer ? toAccountProfileDTO(profileToTransfer) : null
+    "
+    [sale]="saleToTransfer"
+    [originAccount]="originAccountForTransfer"
+    [accounts]="allAccounts"
+    (close)="
+      transferSaleOpen = false; profileToTransfer = null; saleToTransfer = null
+    "
+    (transferred)="onTransferDone()"
   />
 </div>
