@@ -5,7 +5,7 @@ import { StatusPipe, StatusDisplay } from '../../pipes/status.pipe';
 @Component({
   selector: 'app-status-dot',
   standalone: true,
-  imports: [CommonModule, StatusPipe],
+  imports: [CommonModule],
   template: `
     <span class="flex items-center gap-2">
       <span

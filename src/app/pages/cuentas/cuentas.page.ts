@@ -90,7 +90,7 @@ export class CuentasPage implements OnInit {
   changeStatusOpen = false;
   loadingDelete = false;
 
-  currentLimit = 100;
+  currentLimit = 1000;
   totalLoaded = 0;
 
   manageLabelsOpen = false;
