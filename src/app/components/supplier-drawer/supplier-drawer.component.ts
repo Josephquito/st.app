@@ -18,6 +18,7 @@ import { AuthService } from '../../services/auth.service';
 import { parseApiError } from '../../utils/error.utils';
 import { parseISODate, todayISO } from '../../utils/date.utils';
 import { AlertPipe, StatusPipe } from '../../pipes/status.pipe';
+import { ToastService } from '../toast/toast.service';
 
 export type SupplierAccount = {
   id: number;
@@ -38,6 +39,7 @@ export type SupplierAccount = {
 export class SupplierDrawerComponent implements OnChanges, OnDestroy {
   api = inject(SuppliersService);
   auth = inject(AuthService);
+  private toast = inject(ToastService);
 
   @Input() open = false;
   @Input() supplier: SupplierDTO | null = null;
@@ -59,7 +61,7 @@ export class SupplierDrawerComponent implements OnChanges, OnDestroy {
   notes = '';
   notesSaving = false;
   notesSaved = false;
-  notesError = '';
+  notesError = ''; // inline junto al campo
   private notesTimer: any = null;
 
   get canUpdate() {
@@ -79,11 +81,9 @@ export class SupplierDrawerComponent implements OnChanges, OnDestroy {
     this.errorMessage = '';
 
     if (this.open && this.supplier) {
-      // ✅ Siempre sincronizar notes cuando el supplier cambia
       if (changes['supplier']) {
         this.notes = this.supplier.notes ?? '';
       }
-
       if (changes['open']?.currentValue === true || changes['supplier']) {
         await this.load();
       }
@@ -108,7 +108,7 @@ export class SupplierDrawerComponent implements OnChanges, OnDestroy {
     try {
       this.accounts = await this.api.accountsBySupplier(this.supplier.id);
     } catch (e: any) {
-      this.errorMessage = parseApiError(e);
+      this.errorMessage = parseApiError(e); // inline — drawer vacío
     } finally {
       this.loading = false;
     }
@@ -122,7 +122,7 @@ export class SupplierDrawerComponent implements OnChanges, OnDestroy {
 
   private async saveNotes() {
     if (!this.supplier || !this.canUpdate) return;
-    const supplierId = this.supplier.id; // guardar antes de que se nullifique
+    const supplierId = this.supplier.id;
     const notes = this.notes;
     this.notesSaving = true;
     this.notesError = '';
@@ -130,10 +130,10 @@ export class SupplierDrawerComponent implements OnChanges, OnDestroy {
       await this.api.update(supplierId, { notes });
       this.supplier = this.supplier ? { ...this.supplier, notes } : null;
       this.notesSaved = true;
-      this.notesUpdated.emit({ notes, supplierId }); // ✅ emite con id
+      this.notesUpdated.emit({ notes, supplierId });
       setTimeout(() => (this.notesSaved = false), 2000);
     } catch (e: any) {
-      this.notesError = parseApiError(e);
+      this.notesError = parseApiError(e); // inline — junto al campo
     } finally {
       this.notesSaving = false;
     }
@@ -141,12 +141,9 @@ export class SupplierDrawerComponent implements OnChanges, OnDestroy {
 
   onClose() {
     clearTimeout(this.notesTimer);
-
-    // Guardar en paralelo sin esperar — el panel se cierra inmediato
     if (this.supplier && this.notes !== (this.supplier.notes ?? '')) {
       this.saveNotes();
     }
-
     this.accounts = [];
     this.showInactive = false;
     this.errorMessage = '';
@@ -160,7 +157,9 @@ export class SupplierDrawerComponent implements OnChanges, OnDestroy {
     const cutoff = parseISODate(date);
     if (!cutoff) return null;
     const today = parseISODate(todayISO())!;
-    return Math.ceil((cutoff.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.ceil(
+      (cutoff.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+    );
   }
 
   alertBadgeClass(days: number | null): string {

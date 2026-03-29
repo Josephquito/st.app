@@ -180,7 +180,9 @@ export class AllProfilesPageComponent implements OnInit {
     const cutoff = parseISODate(cutoffDate);
     if (!cutoff) return { group: 3, within: 0 };
     const today = parseISODate(todayISO())!;
-    const days = Math.ceil((cutoff.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const days = Math.ceil(
+      (cutoff.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+    );
     if (days < 0) return { group: 0, within: Math.abs(days) };
     if (days === 0) return { group: 1, within: 0 };
     return { group: 2, within: days };
@@ -219,6 +221,8 @@ export class AllProfilesPageComponent implements OnInit {
     const q = this.searchText.trim().toLowerCase();
 
     const filtered = this.profiles.filter((p) => {
+      if (p.status === 'BLOCKED') return false;
+
       const sale = this.getSale(p);
 
       const matchSearch = q

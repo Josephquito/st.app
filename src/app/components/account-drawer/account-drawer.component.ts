@@ -30,6 +30,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { AccountProfilesTableComponent } from '../account-profiles-table/account-profiles-table.component';
 import { formatDisplay } from '../../utils/date.utils';
+import { ToastService } from '../toast/toast.service';
 
 @Component({
   selector: 'app-account-drawer',
@@ -51,6 +52,7 @@ export class AccountDrawerComponent implements OnChanges {
   accountsApi = inject(StreamingAccountsService);
   salesApi = inject(StreamingSalesService);
   labelsApi = inject(StreamingLabelsService);
+  private toast = inject(ToastService);
 
   @Input() open = false;
   @Input() account: StreamingAccountDTO | null = null;
@@ -62,7 +64,7 @@ export class AccountDrawerComponent implements OnChanges {
   @Output() accountUpdated = new EventEmitter<StreamingAccountDTO>();
 
   loading = false;
-  errorMessage = '';
+  errorMessage = ''; // solo para error del refresh inicial
   expanded = false;
   copiedKey = '';
 
@@ -120,7 +122,7 @@ export class AccountDrawerComponent implements OnChanges {
       this.salesByProfileId = this.buildSalesIndex(allSales);
       this.accountLabels = labels;
     } catch (e: any) {
-      this.errorMessage = parseApiError(e);
+      this.errorMessage = parseApiError(e); // inline porque el drawer está vacío
     } finally {
       this.loading = false;
     }
@@ -141,7 +143,7 @@ export class AccountDrawerComponent implements OnChanges {
       }
       this.changed.emit();
     } catch (e: any) {
-      this.errorMessage = parseApiError(e);
+      this.toast.error(parseApiError(e));
     }
   }
 
@@ -243,7 +245,7 @@ export class AccountDrawerComponent implements OnChanges {
       await this.refresh();
       this.changed.emit();
     } catch (e: any) {
-      this.errorMessage = parseApiError(e);
+      this.toast.error(parseApiError(e));
     } finally {
       this.loading = false;
       this.profileToEmpty = null;
@@ -272,7 +274,7 @@ export class AccountDrawerComponent implements OnChanges {
       await this.refresh();
       this.changed.emit();
     } catch (e: any) {
-      this.errorMessage = parseApiError(e);
+      this.toast.error(parseApiError(e));
     } finally {
       this.loading = false;
       this.profileToRemove = null;
@@ -295,7 +297,7 @@ export class AccountDrawerComponent implements OnChanges {
       await this.refresh();
       this.changed.emit();
     } catch (e: any) {
-      this.errorMessage = parseApiError(e);
+      this.toast.error(parseApiError(e));
     } finally {
       this.loading = false;
     }
@@ -317,7 +319,7 @@ export class AccountDrawerComponent implements OnChanges {
       await this.refresh();
       this.changed.emit();
     } catch (e: any) {
-      this.errorMessage = parseApiError(e);
+      this.toast.error(parseApiError(e));
     } finally {
       this.loading = false;
     }
@@ -410,7 +412,7 @@ export class AccountDrawerComponent implements OnChanges {
       const updated = { ...sale, notes: newNote };
       this.salesByProfileId.set(p.id, updated as StreamingSaleDTO);
     } catch (e: any) {
-      this.errorMessage = parseApiError(e);
+      this.toast.error(parseApiError(e));
     }
   }
 
@@ -426,7 +428,7 @@ export class AccountDrawerComponent implements OnChanges {
       );
       this.salesByProfileId.set(p.id, updated);
     } catch (e: any) {
-      this.errorMessage = parseApiError(e);
+      this.toast.error(parseApiError(e));
       (event.target as HTMLSelectElement).value = sale.renewalStatus;
     }
   }
@@ -438,7 +440,7 @@ export class AccountDrawerComponent implements OnChanges {
       const updated = await this.salesApi.pause(sale.id);
       this.salesByProfileId.set(p.id, updated);
     } catch (e: any) {
-      this.errorMessage = parseApiError(e);
+      this.toast.error(parseApiError(e));
     }
   }
 
@@ -449,7 +451,7 @@ export class AccountDrawerComponent implements OnChanges {
       const updated = await this.salesApi.resume(sale.id);
       this.salesByProfileId.set(p.id, updated);
     } catch (e: any) {
-      this.errorMessage = parseApiError(e);
+      this.toast.error(parseApiError(e));
     }
   }
 
@@ -461,7 +463,7 @@ export class AccountDrawerComponent implements OnChanges {
       await this.refresh();
       this.changed.emit();
     } catch (e: any) {
-      this.errorMessage = parseApiError(e);
+      this.toast.error(parseApiError(e));
     }
   }
 

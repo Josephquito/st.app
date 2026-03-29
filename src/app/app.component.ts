@@ -15,11 +15,18 @@ import {
 import { CommonModule } from '@angular/common';
 import { AuthService } from './services/auth.service';
 import { CompanyContextService } from './services/company-context.service';
+import { ToastComponent } from './components/toast/toast.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [
+    CommonModule,
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    ToastComponent,
+  ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })

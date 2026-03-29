@@ -17,6 +17,7 @@ import {
 } from '../../services/customers.service';
 import { AuthService } from '../../services/auth.service';
 import { parseApiError } from '../../utils/error.utils';
+import { ToastService } from '../toast/toast.service';
 
 @Component({
   selector: 'app-customer-drawer',
@@ -27,6 +28,7 @@ import { parseApiError } from '../../utils/error.utils';
 export class CustomerDrawerComponent implements OnChanges, OnDestroy {
   api = inject(CustomersService);
   auth = inject(AuthService);
+  private toast = inject(ToastService);
 
   @Input() open = false;
   @Input() customer: CustomerDTO | null = null;
@@ -49,7 +51,7 @@ export class CustomerDrawerComponent implements OnChanges, OnDestroy {
   notes = '';
   notesSaving = false;
   notesSaved = false;
-  notesError = '';
+  notesError = ''; // se mantiene inline junto al campo
   private notesTimer: any = null;
 
   // Saldo
@@ -102,7 +104,7 @@ export class CustomerDrawerComponent implements OnChanges, OnDestroy {
       this.notes = this.report.customer.notes ?? '';
       this.balanceDraft = this.report.customer.balance ?? '';
     } catch (e: any) {
-      this.errorMessage = parseApiError(e);
+      this.errorMessage = parseApiError(e); // inline — drawer vacío
     } finally {
       this.loading = false;
     }
@@ -134,7 +136,7 @@ export class CustomerDrawerComponent implements OnChanges, OnDestroy {
       this.notesUpdated.emit({ notes, customerId });
       setTimeout(() => (this.notesSaved = false), 2000);
     } catch (e: any) {
-      this.notesError = parseApiError(e);
+      this.notesError = parseApiError(e); // inline — feedback junto al campo
     } finally {
       this.notesSaving = false;
     }
@@ -143,7 +145,6 @@ export class CustomerDrawerComponent implements OnChanges, OnDestroy {
   // ── Saldo ─────────────────────────────────────────────────────────────────
 
   private normalizeBalance(raw: string): string {
-    // reemplaza coma decimal por punto, elimina espacios
     const cleaned = raw.trim().replace(',', '.');
     const num = parseFloat(cleaned);
     if (isNaN(num)) return '';
@@ -153,7 +154,7 @@ export class CustomerDrawerComponent implements OnChanges, OnDestroy {
   onBalanceBlur() {
     if (!this.customer) return;
     const balance = this.normalizeBalance(this.balanceDraft);
-    this.balanceDraft = balance; // ← actualiza el input con el valor normalizado
+    this.balanceDraft = balance;
     if (balance === (this.report?.customer?.balance ?? '')) return;
     this.saveBalance(balance);
   }
@@ -162,11 +163,11 @@ export class CustomerDrawerComponent implements OnChanges, OnDestroy {
     if (!this.customer || !this.canUpdate) return;
     try {
       await this.api.update(this.customer.id, {
-        balance: balance !== '' ? balance : undefined, // ← solo undefined si realmente está vacío
+        balance: balance !== '' ? balance : undefined,
       });
       if (this.report) this.report.customer.balance = balance || null;
     } catch (e: any) {
-      this.notesError = parseApiError(e);
+      this.toast.error(parseApiError(e)); // toast — no tiene campo propio
     }
   }
 

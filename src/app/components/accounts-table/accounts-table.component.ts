@@ -2,6 +2,7 @@ import {
   Component,
   EventEmitter,
   HostListener,
+  inject,
   Input,
   Output,
 } from '@angular/core';
@@ -19,6 +20,8 @@ import {
 } from '../../pipes/status.pipe';
 import { StreamingLabelDTO } from '../../services/streaming-labels.service';
 import { parseISODate, todayISO } from '../../utils/date.utils';
+import { parseApiError } from '../../utils/error.utils';
+import { ToastService } from '../toast/toast.service';
 
 type SortKey =
   | 'ALERT'
@@ -42,6 +45,7 @@ type SortDir = 'asc' | 'desc';
 export class AccountsTableComponent {
   constructor(private api: StreamingAccountsService) {}
   private _accounts: StreamingAccountDTO[] = [];
+  private toast = inject(ToastService);
 
   @Input() set accounts(value: StreamingAccountDTO[]) {
     this._accounts = value;
@@ -134,7 +138,7 @@ export class AccountsTableComponent {
       }
       this.refreshAccounts.emit();
     } catch (err) {
-      console.error('Error al cambiar estado de cuenta', err);
+      this.toast.error(parseApiError(err));
     } finally {
       this.statusLoading = false;
       this.closeMenu();
