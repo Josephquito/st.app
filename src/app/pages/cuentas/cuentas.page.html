@@ -87,6 +87,7 @@
     [open]="viewAccountOpen"
     [account]="selectedAccount"
     [canSell]="canSalesCreate"
+    [allAccounts]="filteredAccounts"
     (close)="closeAll()"
     (changed)="onAccountChanged()"
     (saleCreated)="load()"

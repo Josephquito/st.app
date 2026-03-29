@@ -211,6 +211,17 @@
   (close)="renewSaleOpen = false; saleToRenew = null"
   (renewed)="onSaleRenewed()"
 />
+<app-transfer-sale-modal
+  [open]="transferSaleOpen"
+  [profile]="profileToTransfer"
+  [sale]="saleToTransfer"
+  [originAccount]="account"
+  [accounts]="allAccounts"
+  (close)="
+    transferSaleOpen = false; profileToTransfer = null; saleToTransfer = null
+  "
+  (transferred)="onTransferDone()"
+/>
 
 <!-- Menú flotante — fuera del drawer panel, igual que antes -->
 <div
@@ -264,6 +275,14 @@
             (click)="onResumeSale(menuProfile!); closeMenu()"
           >
             Reanudar venta
+          </button>
+        </li>
+        <li>
+          <button
+            type="button"
+            (click)="onTransferProfile(menuProfile!); closeMenu()"
+          >
+            Trasladar venta
           </button>
         </li>
         <li *ngIf="getSaleForProfile(menuProfile!)?.status === 'PAUSED'">

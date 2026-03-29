@@ -31,6 +31,7 @@ import { FormsModule } from '@angular/forms';
 import { AccountProfilesTableComponent } from '../account-profiles-table/account-profiles-table.component';
 import { formatDisplay } from '../../utils/date.utils';
 import { ToastService } from '../toast/toast.service';
+import { TransferSaleModal } from '../../modales/cuentas/transfer-sale/transfer-sale.modal';
 
 @Component({
   selector: 'app-account-drawer',
@@ -45,6 +46,7 @@ import { ToastService } from '../toast/toast.service';
     StatusPipe,
     AlertPipe,
     FormsModule,
+    TransferSaleModal,
   ],
   templateUrl: './account-drawer.component.html',
 })
@@ -57,6 +59,7 @@ export class AccountDrawerComponent implements OnChanges {
   @Input() open = false;
   @Input() account: StreamingAccountDTO | null = null;
   @Input() canSell = false;
+  @Input() allAccounts: StreamingAccountDTO[] = [];
 
   @Output() close = new EventEmitter<void>();
   @Output() changed = new EventEmitter<void>();
@@ -92,6 +95,10 @@ export class AccountDrawerComponent implements OnChanges {
   menuProfile: AccountProfileDTO | null = null;
   menuX = 0;
   menuY = 0;
+
+  transferSaleOpen = false;
+  profileToTransfer: AccountProfileDTO | null = null;
+  saleToTransfer: StreamingSaleDTO | null = null;
 
   // =========================
   // Lifecycle
@@ -396,6 +403,9 @@ export class AccountDrawerComponent implements OnChanges {
     this.profileToEmpty = null;
     this.profileToRemove = null;
     this.errorMessage = '';
+    this.transferSaleOpen = false;
+    this.profileToTransfer = null;
+    this.saleToTransfer = null;
   }
 
   // =========================
@@ -507,5 +517,22 @@ export class AccountDrawerComponent implements OnChanges {
   @HostListener('window:scroll')
   onScroll() {
     this.closeMenu();
+  }
+
+  onTransferProfile(p: AccountProfileDTO) {
+    const sale = this.getSaleForProfile(p);
+    if (!sale) return;
+    this.profileToTransfer = p;
+    this.saleToTransfer = sale;
+    this.transferSaleOpen = true;
+    this.closeMenu();
+  }
+
+  async onTransferDone() {
+    this.transferSaleOpen = false;
+    this.profileToTransfer = null;
+    this.saleToTransfer = null;
+    await this.refresh();
+    this.changed.emit();
   }
 }

@@ -1,0 +1,178 @@
+<!-- transfer-sale.modal.html -->
+<dialog class="modal" [class.modal-open]="open">
+  <div class="modal-box max-w-2xl">
+    <!-- Título -->
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="font-bold text-lg">Trasladar venta</h3>
+        <p class="text-sm text-base-content/50 mt-0.5">
+          Perfil #{{ profileNo }} ·
+          <span class="font-medium text-base-content/70"
+            >{{ customerName }}</span
+          >
+          · {{ originEmail }}
+        </p>
+      </div>
+      <button
+        type="button"
+        class="btn btn-ghost btn-sm btn-circle"
+        (click)="onClose()"
+        [disabled]="loading"
+      >
+        ✕
+      </button>
+    </div>
+
+    <!-- Error -->
+    <div *ngIf="errorMessage" class="alert alert-error mb-4">
+      <span>{{ errorMessage }}</span>
+    </div>
+
+    <!-- Vista de confirmación -->
+    <ng-container *ngIf="confirmOpen && selectedAccount">
+      <div class="bg-base-200/60 rounded-box p-4 mb-4">
+        <p class="text-sm font-medium mb-1">¿Confirmar traslado?</p>
+        <p class="text-sm text-base-content/60">
+          El cliente
+          <strong>{{ customerName }}</strong>
+          pasará del perfil <strong>#{{ profileNo }}</strong> de
+          <strong>{{ originEmail }}</strong>
+          al primer perfil disponible de
+          <strong>{{ selectedAccount.email }}</strong>.
+        </p>
+      </div>
+      <div class="flex justify-end gap-2">
+        <button
+          type="button"
+          class="btn btn-ghost"
+          (click)="cancelConfirm()"
+          [disabled]="loading"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn btn-neutral"
+          (click)="confirm()"
+          [disabled]="loading"
+        >
+          <span
+            *ngIf="loading"
+            class="loading loading-spinner loading-sm"
+          ></span>
+          Confirmar traslado
+        </button>
+      </div>
+    </ng-container>
+
+    <!-- Vista de selección -->
+    <ng-container *ngIf="!confirmOpen">
+      <!-- Buscador -->
+      <label class="input input-bordered flex items-center gap-2 mb-3">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-4 w-4 opacity-60 shrink-0"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.3-4.3"></path>
+        </svg>
+        <input
+          type="text"
+          class="grow"
+          placeholder="Buscar por email..."
+          [(ngModel)]="searchText"
+        />
+        <button
+          *ngIf="searchText"
+          type="button"
+          class="opacity-40 hover:opacity-100 transition-opacity"
+          (click)="searchText = ''"
+        >
+          ✕
+        </button>
+      </label>
+
+      <!-- Tabla de cuentas disponibles -->
+      <div class="overflow-x-auto">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Alerta</th>
+              <th>Perfiles</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let a of availableAccounts"
+              class="hover cursor-pointer"
+              (click)="selectAccount(a)"
+            >
+              <td class="font-medium text-sm">{{ a.email }}</td>
+              <td>
+                <span
+                  class="badge badge-sm"
+                  [ngClass]="(a.cutoffDate | alert: a.status).badgeClass"
+                >
+                  {{ (a.cutoffDate | alert: a.status).label }}
+                </span>
+              </td>
+              <td>
+                <div class="flex items-center gap-1">
+                  <div
+                    *ngFor="let p of a.profiles"
+                    class="w-4 h-4 rounded-full flex items-center justify-center tooltip tooltip-top cursor-default"
+                    [ngClass]="profileDotClass(p)"
+                    [attr.data-tip]="profileDotTooltip(p)"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="w-2.5 h-2.5 text-base-100"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <path
+                        d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"
+                      />
+                    </svg>
+                  </div>
+                  <span class="text-xs text-base-content/40 ml-1">
+                    {{ availableProfilesCount(a) }} libre(s)
+                  </span>
+                </div>
+              </td>
+              <td class="text-right">
+                <button type="button" class="btn btn-ghost btn-xs">
+                  Seleccionar
+                </button>
+              </td>
+            </tr>
+
+            <tr *ngIf="availableAccounts.length === 0">
+              <td colspan="4" class="text-center text-base-content/40 py-6">
+                No hay cuentas disponibles para trasladar en esta plataforma.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="modal-action">
+        <button type="button" class="btn btn-ghost" (click)="onClose()">
+          Cancelar
+        </button>
+      </div>
+    </ng-container>
+  </div>
+
+  <form method="dialog" class="modal-backdrop">
+    <button type="button" (click)="onClose()">close</button>
+  </form>
+</dialog>

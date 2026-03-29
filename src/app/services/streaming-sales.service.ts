@@ -64,11 +64,6 @@ export type RenewStreamingSaleDto = {
   notes?: string;
 };
 
-export type TransferProfileDto = {
-  targetAccountId: number;
-  targetProfileId: number;
-};
-
 export type SalesQueryDto = {
   status?: SaleStatus;
   renewalStatus?: RenewalMessageStatus;
@@ -132,13 +127,6 @@ export class StreamingSalesService {
   resume(id: number): Promise<StreamingSaleDTO> {
     return firstValueFrom(
       this.http.post<StreamingSaleDTO>(`${this.base}/${id}/resume`, {}),
-    );
-  }
-
-  // Transfiere cliente a otro perfil/cuenta de la misma plataforma
-  transfer(id: number, dto: TransferProfileDto): Promise<StreamingSaleDTO> {
-    return firstValueFrom(
-      this.http.post<StreamingSaleDTO>(`${this.base}/${id}/transfer`, dto),
     );
   }
 

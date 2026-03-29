@@ -285,4 +285,16 @@ export class StreamingAccountsService {
       this.http.get<ProfileWithContextDTO[]>(`${this.base}/profiles/all`),
     );
   }
+
+  transferProfile(
+    profileId: number,
+    targetAccountId: number,
+  ): Promise<StreamingAccountDTO> {
+    return firstValueFrom(
+      this.http.post<StreamingAccountDTO>(
+        `${this.base}/profiles/${profileId}/transfer`,
+        { targetAccountId },
+      ),
+    );
+  }
 }
