@@ -92,7 +92,6 @@ export class EditAccountModal implements OnChanges {
   }
 
   private hydrateFromAccount(a: StreamingAccountDTO) {
-    this.platformId = a.platformId ?? (a as any)?.platform?.id ?? null;
     this.supplierId = a.supplierId ?? (a as any)?.supplier?.id ?? null;
     this.email = a.email ?? '';
     this.password = (a as any)?.password ?? '';
@@ -289,9 +288,7 @@ export class EditAccountModal implements OnChanges {
     }
     // Si no hay período nuevo, recalcula con durationDays actual de la cuenta
     if (this.account?.durationDays) {
-      this.cutoffDate = toISODate(
-        addDays(base, this.account.durationDays),
-      );
+      this.cutoffDate = toISODate(addDays(base, this.account.durationDays));
     }
   }
 
@@ -334,10 +331,6 @@ export class EditAccountModal implements OnChanges {
     if (!this.account) return;
     this.errorMessage = '';
 
-    if (!this.platformId) {
-      this.errorMessage = 'Selecciona plataforma.';
-      return;
-    }
     if (!this.supplierId) {
       this.errorMessage = 'Selecciona o crea un proveedor.';
       return;
@@ -351,7 +344,6 @@ export class EditAccountModal implements OnChanges {
       return;
     }
 
-    // Calcular durationDays efectivo
     const effectiveDurationDays = this.getEffectiveDurationDays();
     if (!effectiveDurationDays || effectiveDurationDays < 1) {
       this.errorMessage = 'Duración inválida.';
@@ -361,17 +353,12 @@ export class EditAccountModal implements OnChanges {
     this.loading = true;
     try {
       await this.api.update(this.account.id, {
-        platformId: this.platformId,
         supplierId: this.supplierId,
         email: this.email.trim(),
         password: this.password,
         purchaseDate: this.purchaseDate,
         durationDays: effectiveDurationDays,
         notes: this.notes?.trim() ? this.notes.trim() : null,
-        ...(this.status !== this.account.status &&
-        (this.status === 'INACTIVE' || this.status === 'ACTIVE')
-          ? { status: this.status }
-          : {}),
       });
       this.updated.emit();
       this.onClose();
@@ -396,5 +383,11 @@ export class EditAccountModal implements OnChanges {
     if (this.account?.durationDays) {
       this.cutoffDate = toISODate(addDays(base, this.account.durationDays));
     }
+  }
+
+  getPlatformName(): string {
+    const id = this.account?.platformId ?? (this.account as any)?.platform?.id;
+    const p = this.platforms.find((x) => x.id === id);
+    return p?.name ?? '—';
   }
 }

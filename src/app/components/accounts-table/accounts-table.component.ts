@@ -212,7 +212,9 @@ export class AccountsTableComponent {
     const cutoff = parseISODate(cutoffDate);
     if (!cutoff) return null;
     const today = parseISODate(todayISO())!;
-    return Math.ceil((cutoff.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.ceil(
+      (cutoff.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+    );
   }
 
   usedProfilesText(a: StreamingAccountDTO): string {
@@ -358,6 +360,7 @@ export class AccountsTableComponent {
 
   profileDotClass(p: AccountProfileDTO): string {
     const sale = p.sales?.[0];
+    console.log(p.profileNo, sale?.cutoffDate, sale?.status);
     return getProfileDotColor(
       p.status,
       sale?.status ?? null,

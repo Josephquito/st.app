@@ -142,9 +142,18 @@ export class CustomerDrawerComponent implements OnChanges, OnDestroy {
 
   // ── Saldo ─────────────────────────────────────────────────────────────────
 
+  private normalizeBalance(raw: string): string {
+    // reemplaza coma decimal por punto, elimina espacios
+    const cleaned = raw.trim().replace(',', '.');
+    const num = parseFloat(cleaned);
+    if (isNaN(num)) return '';
+    return num.toFixed(2);
+  }
+
   onBalanceBlur() {
     if (!this.customer) return;
-    const balance = this.balanceDraft.trim();
+    const balance = this.normalizeBalance(this.balanceDraft);
+    this.balanceDraft = balance; // ← actualiza el input con el valor normalizado
     if (balance === (this.report?.customer?.balance ?? '')) return;
     this.saveBalance(balance);
   }
@@ -153,7 +162,7 @@ export class CustomerDrawerComponent implements OnChanges, OnDestroy {
     if (!this.customer || !this.canUpdate) return;
     try {
       await this.api.update(this.customer.id, {
-        balance: balance || undefined,
+        balance: balance !== '' ? balance : undefined, // ← solo undefined si realmente está vacío
       });
       if (this.report) this.report.customer.balance = balance || null;
     } catch (e: any) {

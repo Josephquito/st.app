@@ -1,6 +1,12 @@
 <dialog class="modal" [class.modal-open]="open">
   <div class="modal-box max-w-3xl">
-    <h3 class="font-bold text-lg">Editar cuenta</h3>
+    <div class="flex items-center justify-between">
+      <h3 class="font-bold text-lg">Editar cuenta</h3>
+      <div class="flex items-center gap-2">
+        <span class="badge badge-ghost">{{ getPlatformName() }}</span>
+        <span class="badge badge-ghost">{{ profilesTotal }} perfiles</span>
+      </div>
+    </div>
 
     <div *ngIf="errorMessage" class="alert alert-error mt-3">
       <span>{{ errorMessage }}</span>
@@ -20,17 +26,6 @@
       *ngIf="!suppliersLoading"
       class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3"
     >
-      <!-- Plataforma -->
-      <label class="form-control">
-        <div class="label"><span class="label-text">Plataforma</span></div>
-        <select class="select select-bordered" [(ngModel)]="platformId">
-          <option [ngValue]="null" disabled>Selecciona...</option>
-          <option *ngFor="let p of platforms" [ngValue]="p.id">
-            {{ p.name }}
-          </option>
-        </select>
-      </label>
-
       <!-- Proveedor -->
       <div class="form-control relative">
         <div class="label"><span class="label-text">Proveedor</span></div>
@@ -48,7 +43,9 @@
           class="absolute left-0 right-0 top-[72px] z-50 rounded-box border bg-base-100 shadow overflow-hidden"
         >
           <!-- Resultados con scroll vertical, máximo 3 visibles -->
-          <ul class="menu p-2 pb-0 max-h-[9rem] overflow-y-auto overflow-x-hidden flex-nowrap">
+          <ul
+            class="menu p-2 pb-0 max-h-[9rem] overflow-y-auto overflow-x-hidden flex-nowrap"
+          >
             <li *ngFor="let s of supplierMatches; trackBy: trackSupplier">
               <button
                 type="button"
@@ -98,16 +95,6 @@
       <label class="form-control">
         <div class="label"><span class="label-text">Clave</span></div>
         <input class="input input-bordered" [(ngModel)]="password" />
-      </label>
-
-      <!-- Perfiles -->
-      <label class="form-control">
-        <div class="label"><span class="label-text">Perfiles total</span></div>
-        <input
-          class="input input-bordered"
-          type="number"
-          [(ngModel)]="profilesTotal"
-        />
       </label>
 
       <!-- Fecha compra -->

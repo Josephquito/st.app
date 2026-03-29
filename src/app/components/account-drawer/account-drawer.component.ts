@@ -29,6 +29,7 @@ import {
 } from '../../services/streaming-labels.service';
 import { FormsModule } from '@angular/forms';
 import { AccountProfilesTableComponent } from '../account-profiles-table/account-profiles-table.component';
+import { formatDisplay } from '../../utils/date.utils';
 
 @Component({
   selector: 'app-account-drawer',
@@ -349,13 +350,7 @@ export class AccountDrawerComponent implements OnChanges {
     const platform = (this.account?.platform?.name ?? '').toUpperCase();
     const email = this.account?.email ?? '';
     const password = this.account?.password ?? '';
-    const cutoff = sale?.cutoffDate
-      ? new Date(sale.cutoffDate).toLocaleDateString('es-EC', {
-          day: 'numeric',
-          month: 'numeric',
-          year: 'numeric',
-        })
-      : '—';
+    const cutoff = formatDisplay(sale?.cutoffDate);
     const text = `${platform}\n${email}\nClave: ${password}\nPerfil: ${p.profileNo}\n\nCorte: ${cutoff}\n•No reproducir en dos dispositivos a la vez.\n•No modificar nada de la cuenta.`;
     this.copy(`info-${p.id}`, text);
   }
@@ -365,13 +360,7 @@ export class AccountDrawerComponent implements OnChanges {
     const platform = (this.account?.platform?.name ?? '').toUpperCase();
     const email = this.account?.email ?? '';
     const password = this.account?.password ?? '';
-    const cutoff = sale?.cutoffDate
-      ? new Date(sale.cutoffDate).toLocaleDateString('es-EC', {
-          day: 'numeric',
-          month: 'numeric',
-          year: 'numeric',
-        })
-      : '—';
+    const cutoff = formatDisplay(sale?.cutoffDate);
     const text = `${platform} NUEVA CLAVE\n${email}\nClave: ${password}\n\nCorte: ${cutoff}`;
     this.copy(`pass-${p.id}`, text);
   }
