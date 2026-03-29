@@ -13,6 +13,7 @@ import { EditSupplierModal } from '../../modales/suppliers/edit-supplier/edit-su
 import { AdjustBalanceModal } from '../../modales/suppliers/adjust-balance/adjust-balance.modal';
 import { SupplierDrawerComponent } from '../../components/supplier-drawer/supplier-drawer.component';
 import { ConfirmActionModal } from '../../modales/confirmacion/confirm-action/confirm-action.modal';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-suppliers-page',
@@ -24,6 +25,7 @@ import { ConfirmActionModal } from '../../modales/confirmacion/confirm-action/co
     AdjustBalanceModal,
     SupplierDrawerComponent,
     ConfirmActionModal,
+    FormsModule,
   ],
   templateUrl: './suppliers.page.html',
   styleUrls: ['./suppliers.page.css'],
@@ -51,6 +53,8 @@ export class SuppliersPage implements OnInit {
   menuDirection: 'down' | 'up' = 'down';
 
   loadingDelete = false;
+
+  searchText = '';
 
   get canCreate() {
     return this.auth.hasPermission('SUPPLIERS:CREATE');
@@ -236,5 +240,13 @@ export class SuppliersPage implements OnInit {
     } finally {
       this.loadingDelete = false;
     }
+  }
+
+  get filteredSuppliers(): SupplierDTO[] {
+    const q = this.searchText.trim().toLowerCase();
+    if (!q) return this.suppliers;
+    return this.suppliers.filter((s) =>
+      `${s.name} ${s.contact}`.toLowerCase().includes(q),
+    );
   }
 }

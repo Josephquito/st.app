@@ -18,6 +18,37 @@
     <span>{{ errorMessage }}</span>
   </div>
 
+  <!-- Buscador -->
+  <label class="input input-bordered flex items-center gap-2">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      class="h-4 w-4 opacity-60 shrink-0"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <circle cx="11" cy="11" r="8"></circle>
+      <path d="m21 21-4.3-4.3"></path>
+    </svg>
+    <input
+      type="text"
+      class="grow"
+      placeholder="Buscar por nombre o contacto..."
+      [(ngModel)]="searchText"
+    />
+    <button
+      *ngIf="searchText"
+      type="button"
+      class="opacity-40 hover:opacity-100 transition-opacity"
+      (click)="searchText = ''"
+    >
+      ✕
+    </button>
+  </label>
+
   <div class="card bg-base-100 shadow-sm">
     <div class="card-body">
       <!-- Loading -->
@@ -40,7 +71,7 @@
 
           <tbody>
             <tr
-              *ngFor="let s of suppliers"
+              *ngFor="let s of filteredSuppliers"
               class="cursor-pointer"
               [ngClass]="{ 'bg-base-200': drawerSupplier?.id === s.id }"
               (click)="openDrawer(s)"
@@ -67,9 +98,10 @@
               </td>
             </tr>
 
-            <tr *ngIf="suppliers.length === 0">
-              <td colspan="5" class="text-center text-base-content/50 py-6">
-                No hay proveedores registrados.
+            <tr *ngIf="filteredSuppliers.length === 0">
+              <td colspan="4" class="text-center text-base-content/50 py-6">
+                {{ searchText ? 'No hay proveedores que coincidan con la
+                búsqueda.' : 'No hay proveedores registrados.' }}
               </td>
             </tr>
           </tbody>
@@ -85,10 +117,10 @@
     [style.left.px]="menuX"
     [style.top.px]="menuY"
     [style.transform]="
-    menuDirection === 'up'
-      ? 'translate(calc(-100%), calc(-100% - 6px))'
-      : 'translate(calc(-100%), 6px)'
-  "
+      menuDirection === 'up'
+        ? 'translate(calc(-100%), calc(-100% - 6px))'
+        : 'translate(calc(-100%), 6px)'
+    "
     (click)="$event.stopPropagation()"
   >
     <div
@@ -104,7 +136,6 @@
             Editar
           </button>
         </li>
-
         <li *ngIf="canUpdate">
           <button
             type="button"
@@ -114,12 +145,10 @@
             Ajustar saldo
           </button>
         </li>
-
         <div
           *ngIf="canDelete && canUpdate"
           class="my-1 mx-2 h-px bg-base-200"
         ></div>
-
         <li *ngIf="canDelete">
           <button
             type="button"
