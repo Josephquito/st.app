@@ -1,0 +1,117 @@
+<dialog class="modal" [class.modal-open]="open">
+  <div class="modal-box max-w-lg">
+    <h3 class="font-bold text-lg">
+      {{ isEdit ? 'Editar campaña' : 'Nueva campaña' }}
+    </h3>
+
+    <div *ngIf="errorMessage" class="alert alert-error mt-3">
+      <span>{{ errorMessage }}</span>
+    </div>
+
+    <div class="mt-4 flex flex-col gap-3">
+      <!-- Nombre -->
+      <label class="form-control">
+        <div class="label"><span class="label-text">Nombre</span></div>
+        <input
+          class="input input-bordered w-full"
+          type="text"
+          [(ngModel)]="name"
+          placeholder="Ej: Campaña Mayo 2026"
+          maxlength="100"
+        />
+      </label>
+
+      <!-- Segmento -->
+      <label class="form-control">
+        <div class="label"><span class="label-text">Segmento</span></div>
+        <select class="select select-bordered w-full" [(ngModel)]="segment">
+          <option value="ALL">Todos</option>
+          <option value="PROSPECT">Prospectos</option>
+          <option value="HOT">
+            Calientes — compraron hace menos de 3 meses
+          </option>
+          <option value="WARM">Tibios — compraron hace 3-6 meses</option>
+          <option value="COLD">Fríos — compraron hace más de 6 meses</option>
+        </select>
+        <div class="label">
+          <span class="label-text-alt opacity-60">
+            Solo es una etiqueta — tú seleccionas los contactos manualmente.
+          </span>
+        </div>
+      </label>
+
+      <!-- Mensaje -->
+      <label class="form-control">
+        <div class="label"><span class="label-text">Mensaje</span></div>
+        <textarea
+          class="textarea textarea-bordered w-full"
+          rows="5"
+          [(ngModel)]="message"
+          placeholder="Escribe el mensaje que recibirán tus clientes..."
+          maxlength="1000"
+        ></textarea>
+        <div class="label">
+          <span class="label-text-alt opacity-60">
+            {{ message.length }}/1000
+          </span>
+        </div>
+      </label>
+
+      <!-- URL imagen -->
+      <label class="form-control">
+        <div class="label">
+          <span class="label-text">URL de imagen</span>
+          <span class="label-text-alt opacity-60">Opcional</span>
+        </div>
+        <input
+          class="input input-bordered w-full"
+          type="url"
+          [(ngModel)]="imageUrl"
+          placeholder="https://i.imgur.com/..."
+        />
+        <div class="label">
+          <span class="label-text-alt opacity-60">
+            Sube tu flyer a Imgur y pega el link directo aquí.
+          </span>
+        </div>
+      </label>
+
+      <!-- Preview imagen -->
+      <div
+        *ngIf="imageUrl.trim()"
+        class="rounded-box overflow-hidden border border-base-200"
+      >
+        <img
+          [src]="imageUrl.trim()"
+          alt="Preview"
+          class="w-full max-h-48 object-contain bg-base-200"
+          (error)="errorMessage = 'La URL de imagen no es válida o no carga.'"
+        />
+      </div>
+    </div>
+
+    <div class="modal-action">
+      <button
+        class="btn"
+        type="button"
+        (click)="onClose()"
+        [disabled]="loading"
+      >
+        Cancelar
+      </button>
+      <button
+        class="btn btn-neutral"
+        type="button"
+        (click)="submit()"
+        [disabled]="loading"
+      >
+        <span *ngIf="loading" class="loading loading-spinner loading-sm"></span>
+        {{ isEdit ? 'Guardar cambios' : 'Crear campaña' }}
+      </button>
+    </div>
+  </div>
+
+  <form method="dialog" class="modal-backdrop">
+    <button type="button" (click)="onClose()">close</button>
+  </form>
+</dialog>

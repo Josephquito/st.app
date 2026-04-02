@@ -1,0 +1,379 @@
+<div class="page">
+  <!-- Header -->
+  <div class="header">
+    <div class="flex items-center gap-3">
+      <button class="btn btn-ghost btn-sm" type="button" (click)="goBack()">
+        ← Volver
+      </button>
+      <div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <h1 class="title">{{ campaign?.name ?? '...' }}</h1>
+          <span
+            *ngIf="campaign"
+            class="badge badge-sm"
+            [ngClass]="campaignStatusClass(campaign.status)"
+          >
+            {{ campaignStatusLabel(campaign.status) }}
+          </span>
+        </div>
+        <p class="subtitle">{{ campaign?.segment ?? '' }}</p>
+      </div>
+    </div>
+    <button
+      class="btn btn-neutral btn-sm"
+      type="button"
+      (click)="addContactsOpen = true"
+    >
+      + Agregar contactos
+    </button>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="errorMessage" class="alert alert-error">
+    <span>{{ errorMessage }}</span>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="flex items-center gap-2 py-8 justify-center">
+    <span class="loading loading-spinner loading-md"></span>
+    <span>Cargando campaña...</span>
+  </div>
+
+  <ng-container *ngIf="!loading && campaign">
+    <!-- Métricas -->
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-value">{{ campaign.totalContacts }}</div>
+        <div class="metric-label">Total contactos</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value text-info">{{ campaign.sentCount }}</div>
+        <div class="metric-label">Enviados</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value text-warning">
+          {{ campaign.respondedCount }}
+        </div>
+        <div class="metric-label">Respondieron</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value text-success">
+          {{ campaign.purchasedCount }}
+        </div>
+        <div class="metric-label">Compraron</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value text-error">{{ campaign.failedCount }}</div>
+        <div class="metric-label">Fallidos</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">
+          {{ campaign.sentCount > 0 ? ((campaign.respondedCount /
+          campaign.sentCount) * 100 | number:'1.0-0') : 0 }}%
+        </div>
+        <div class="metric-label">Tasa de respuesta</div>
+      </div>
+    </div>
+
+    <!-- Mensaje preview -->
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body py-3">
+        <div class="flex gap-4 flex-wrap">
+          <div class="flex-1 min-w-0">
+            <p
+              class="text-xs text-base-content/40 font-medium uppercase tracking-wide mb-1"
+            >
+              Mensaje
+            </p>
+            <p class="text-sm whitespace-pre-wrap">{{ campaign.message }}</p>
+          </div>
+          <div *ngIf="campaign.imageUrl" class="shrink-0">
+            <p
+              class="text-xs text-base-content/40 font-medium uppercase tracking-wide mb-1"
+            >
+              Imagen
+            </p>
+            <img
+              [src]="campaign.imageUrl"
+              alt="Flyer"
+              class="h-24 w-24 object-cover rounded-box border border-base-200"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toolbar contactos -->
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body py-3">
+        <div class="flex flex-col gap-3">
+          <!-- Buscador -->
+          <label class="input input-bordered flex items-center gap-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-4 w-4 opacity-60 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+            <input
+              type="text"
+              class="grow"
+              placeholder="Buscar contacto..."
+              [(ngModel)]="searchText"
+            />
+            <button
+              *ngIf="searchText"
+              type="button"
+              class="opacity-40 hover:opacity-100 transition-opacity"
+              (click)="searchText = ''"
+            >
+              ✕
+            </button>
+          </label>
+
+          <!-- Filtros status -->
+          <div class="flex flex-wrap items-center gap-2">
+            <span
+              class="text-xs text-base-content/40 font-medium uppercase tracking-wide mr-1"
+            >
+              Estado
+            </span>
+            <button
+              *ngFor="let s of ['PENDING','SENT','RESPONDED','PURCHASED','FAILED']"
+              type="button"
+              class="badge badge-lg cursor-pointer transition-all"
+              [ngClass]="statusFilter === s ? 'badge-neutral' : 'badge-ghost opacity-50 hover:opacity-80'"
+              (click)="setStatusFilter(s)"
+            >
+              {{ contactStatusLabel(s) }}
+            </button>
+            <button
+              *ngIf="hasActiveFilters"
+              type="button"
+              class="btn btn-ghost btn-xs ml-auto text-base-content/40"
+              (click)="clearFilters()"
+            >
+              Limpiar filtros
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botón enviar seleccionados -->
+    <div *ngIf="selectedIds.size > 0" class="send-bar">
+      <span class="text-sm font-medium">
+        {{ selectedIds.size }} contacto{{ selectedIds.size !== 1 ? 's' : '' }}
+        seleccionado{{ selectedIds.size !== 1 ? 's' : '' }}
+      </span>
+      <button
+        class="btn btn-success btn-sm"
+        type="button"
+        (click)="sendSelected()"
+        [disabled]="loadingSend"
+      >
+        <span
+          *ngIf="loadingSend"
+          class="loading loading-spinner loading-xs"
+        ></span>
+        Enviar seleccionados
+      </button>
+    </div>
+
+    <!-- Tabla contactos -->
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body p-0">
+        <div class="overflow-x-auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th class="w-10">
+                  <input
+                    type="checkbox"
+                    class="checkbox checkbox-sm"
+                    [checked]="allPendingSelected"
+                    [disabled]="pendingContacts.length === 0"
+                    (change)="toggleSelectAll()"
+                  />
+                </th>
+                <th>Cliente</th>
+                <th>Contacto</th>
+                <th>Última compra</th>
+                <th class="text-right">Ventas</th>
+                <th>Estado</th>
+                <th>Enviado</th>
+                <th>Respondió</th>
+                <th>Compró</th>
+                <th class="text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                *ngFor="let c of visible"
+                class="hover"
+                [class.bg-base-200]="selectedIds.has(c.id)"
+              >
+                <!-- Checkbox -->
+                <td (click)="$event.stopPropagation()">
+                  <input
+                    type="checkbox"
+                    class="checkbox checkbox-sm"
+                    [checked]="selectedIds.has(c.id)"
+                    [disabled]="c.status !== 'PENDING'"
+                    (change)="toggleSelect(c.id, c.status)"
+                  />
+                </td>
+
+                <!-- Cliente -->
+                <td class="no-wrap">
+                  <div class="font-medium text-sm">{{ c.customer.name }}</div>
+                </td>
+
+                <!-- Contacto -->
+                <td class="no-wrap text-sm text-base-content/60">
+                  {{ c.customer.contact }}
+                </td>
+
+                <!-- Última compra -->
+                <td class="no-wrap text-sm text-base-content/60">
+                  {{ c.customer.lastPurchaseAt ? (c.customer.lastPurchaseAt |
+                  date:'dd/MM/yyyy':'UTC') : '—' }}
+                </td>
+
+                <!-- Total ventas -->
+                <td class="text-right text-sm">
+                  <span [class.opacity-40]="c.customer._count.sales === 0">
+                    {{ c.customer._count.sales }}
+                  </span>
+                </td>
+
+                <!-- Status -->
+                <td class="no-wrap">
+                  <span
+                    class="badge badge-sm"
+                    [ngClass]="contactStatusClass(c.status)"
+                  >
+                    {{ contactStatusLabel(c.status) }}
+                  </span>
+                  <div
+                    *ngIf="c.status === 'FAILED' && c.failReason"
+                    class="text-xs text-error mt-0.5"
+                  >
+                    {{ c.failReason }}
+                  </div>
+                  <div
+                    *ngIf="c.status === 'PURCHASED' && c.platformPurchased"
+                    class="text-xs text-success mt-0.5"
+                  >
+                    {{ c.platformPurchased }}
+                  </div>
+                </td>
+
+                <!-- Enviado -->
+                <td class="no-wrap text-sm text-base-content/60">
+                  {{ c.sentAt ? (c.sentAt | date:'dd/MM HH:mm') : '—' }}
+                </td>
+
+                <!-- Respondió -->
+                <td class="no-wrap text-sm text-base-content/60">
+                  {{ c.respondedAt ? (c.respondedAt | date:'dd/MM HH:mm') : '—'
+                  }}
+                </td>
+
+                <!-- Compró -->
+                <td class="no-wrap text-sm text-base-content/60">
+                  {{ c.purchasedAt ? (c.purchasedAt | date:'dd/MM HH:mm') : '—'
+                  }}
+                </td>
+
+                <!-- Acciones -->
+                <td
+                  class="text-right no-wrap"
+                  (click)="$event.stopPropagation()"
+                >
+                  <button
+                    type="button"
+                    class="btn btn-ghost btn-sm !px-2"
+                    [disabled]="c.status !== 'PENDING'"
+                    (click)="toggleMenu(c, $event)"
+                  >
+                    ⋮
+                  </button>
+                </td>
+              </tr>
+
+              <tr *ngIf="visible.length === 0">
+                <td colspan="10" class="text-center text-base-content/50 py-8">
+                  No hay contactos que coincidan con los filtros.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- Menú flotante -->
+  <div
+    *ngIf="menuOpen && menuContact"
+    class="fixed z-[3200]"
+    [style.left.px]="menuX"
+    [style.top.px]="menuY"
+    [style.transform]="menuDirection === 'up' ? 'translateY(calc(-100% - 6px))' : 'translateY(6px)'"
+    (click)="$event.stopPropagation()"
+  >
+    <div class="bg-base-100 shadow rounded-box w-48 border border-base-200">
+      <ul class="menu p-2">
+        <li>
+          <button
+            type="button"
+            class="text-error"
+            (click)="openRemove(menuContact!)"
+          >
+            Quitar de campaña
+          </button>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div *ngIf="toast" class="toast toast-end toast-bottom z-[99999]">
+    <div
+      class="alert"
+      [class.alert-success]="toast.type === 'success'"
+      [class.alert-error]="toast.type === 'error'"
+    >
+      <span>{{ toast.message }}</span>
+    </div>
+  </div>
+
+  <!-- Modal agregar contactos -->
+  <app-add-contacts-campaign-modal
+    [open]="addContactsOpen"
+    [campaignId]="campaignId"
+    [existingContactIds]="existingContactIds"
+    (close)="addContactsOpen = false"
+    (added)="onContactsAdded()"
+  />
+
+  <!-- Confirmar quitar -->
+  <app-confirm-action-modal
+    [open]="confirmRemoveOpen"
+    title="¿Quitar contacto?"
+    [message]="'Se quitará ' + (contactToRemove?.customer?.name ?? '') + ' de esta campaña.'"
+    confirmLabel="Quitar"
+    [danger]="true"
+    [loading]="loadingRemove"
+    (confirm)="confirmRemove()"
+    (cancel)="cancelRemove()"
+  />
+</div>

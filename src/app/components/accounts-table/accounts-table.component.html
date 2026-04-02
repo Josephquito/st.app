@@ -1,5 +1,6 @@
-<!-- Buscador -->
-<div *ngIf="!loading" class="flex flex-col gap-3 mb-4">
+<!-- Buscador + Filtros-->
+<div class="flex flex-col gap-2 mb-4">
+  <!-- Buscador -->
   <label class="input input-bordered flex items-center gap-2">
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -31,18 +32,16 @@
     </button>
   </label>
 
-  <!-- Chips estado -->
-  <div class="flex flex-wrap items-center gap-2">
-    <span
-      class="text-xs text-base-content/40 font-medium uppercase tracking-wide mr-1"
-      >Estado</span
-    >
+  <!-- Fila 1: Cuenta -->
+  <div class="flex flex-wrap items-center gap-x-1 gap-y-2">
+    <span class="chip-label">Cuenta</span>
+
     <button
       *ngFor="let s of statusOptions"
       type="button"
       class="badge badge-lg cursor-pointer transition-all"
       [ngClass]="
-        statusFilter === s.value
+        statusFilter === s.value && !accountAlertFilter
           ? 'badge-neutral'
           : 'badge-ghost opacity-50 hover:opacity-80'
       "
@@ -51,15 +50,147 @@
       {{ s.label }}
     </button>
 
-    <!-- Chips etiquetas -->
-    <div
-      *ngIf="labels.length > 0"
-      class="flex items-center gap-2 ml-3 pl-3 border-l border-base-300"
+    <span class="chip-divider"></span>
+
+    <button
+      type="button"
+      class="badge badge-lg cursor-pointer transition-all"
+      [ngClass]="
+        accountAlertFilter === 'EXPIRED'
+          ? 'badge-error'
+          : 'badge-ghost opacity-50 hover:opacity-80'
+      "
+      (click)="setAccountAlertFilter('EXPIRED')"
     >
-      <span
-        class="text-xs text-base-content/40 font-medium uppercase tracking-wide mr-1"
-        >Etiqueta</span
-      >
+      Vencida
+    </button>
+    <button
+      type="button"
+      class="badge badge-lg cursor-pointer transition-all"
+      [ngClass]="
+        accountAlertFilter === 'TODAY'
+          ? 'badge-warning'
+          : 'badge-ghost opacity-50 hover:opacity-80'
+      "
+      (click)="setAccountAlertFilter('TODAY')"
+    >
+      Vence hoy
+    </button>
+    <button
+      type="button"
+      class="badge badge-lg cursor-pointer transition-all"
+      [ngClass]="
+        accountAlertFilter === '1_3_DAYS'
+          ? 'badge-warning'
+          : 'badge-ghost opacity-50 hover:opacity-80'
+      "
+      (click)="setAccountAlertFilter('1_3_DAYS')"
+    >
+      1-3 días
+    </button>
+    <button
+      type="button"
+      class="badge badge-lg cursor-pointer transition-all"
+      [ngClass]="
+        accountAlertFilter === 'MORE_3_DAYS'
+          ? 'badge-neutral'
+          : 'badge-ghost opacity-50 hover:opacity-80'
+      "
+      (click)="setAccountAlertFilter('MORE_3_DAYS')"
+    >
+      +3 días
+    </button>
+
+    <button
+      *ngIf="hasActiveFilters()"
+      type="button"
+      class="btn btn-ghost btn-xs ml-auto text-base-content/40"
+      (click)="clearFilters()"
+    >
+      Limpiar filtros
+    </button>
+  </div>
+
+  <!-- Fila 2: Perfiles + Etiquetas -->
+  <div class="flex flex-wrap items-center gap-x-1 gap-y-2">
+    <span class="chip-label">Perfiles</span>
+
+    <button
+      type="button"
+      class="badge badge-lg cursor-pointer transition-all"
+      [ngClass]="
+        profileAlertFilter === 'AVAILABLE'
+          ? 'badge-success'
+          : 'badge-ghost opacity-50 hover:opacity-80'
+      "
+      (click)="setProfileAlertFilter('AVAILABLE')"
+    >
+      Disponibles
+    </button>
+    <button
+      type="button"
+      class="badge badge-lg cursor-pointer transition-all"
+      [ngClass]="
+        profileAlertFilter === 'EXPIRED'
+          ? 'badge-error'
+          : 'badge-ghost opacity-50 hover:opacity-80'
+      "
+      (click)="setProfileAlertFilter('EXPIRED')"
+    >
+      Vencidos
+    </button>
+    <button
+      type="button"
+      class="badge badge-lg cursor-pointer transition-all"
+      [ngClass]="
+        profileAlertFilter === 'TODAY'
+          ? 'badge-warning'
+          : 'badge-ghost opacity-50 hover:opacity-80'
+      "
+      (click)="setProfileAlertFilter('TODAY')"
+    >
+      Vence hoy
+    </button>
+    <button
+      type="button"
+      class="badge badge-lg cursor-pointer transition-all"
+      [ngClass]="
+        profileAlertFilter === '1_3_DAYS'
+          ? 'badge-warning'
+          : 'badge-ghost opacity-50 hover:opacity-80'
+      "
+      (click)="setProfileAlertFilter('1_3_DAYS')"
+    >
+      1-3 días
+    </button>
+    <button
+      type="button"
+      class="badge badge-lg cursor-pointer transition-all"
+      [ngClass]="
+        profileAlertFilter === 'MORE_3_DAYS'
+          ? 'badge-neutral'
+          : 'badge-ghost opacity-50 hover:opacity-80'
+      "
+      (click)="setProfileAlertFilter('MORE_3_DAYS')"
+    >
+      +3 días
+    </button>
+    <button
+      type="button"
+      class="badge badge-lg cursor-pointer transition-all"
+      [ngClass]="
+        profileAlertFilter === 'PAUSED'
+          ? 'badge-info'
+          : 'badge-ghost opacity-50 hover:opacity-80'
+      "
+      (click)="setProfileAlertFilter('PAUSED')"
+    >
+      Pausados
+    </button>
+
+    <ng-container *ngIf="labels.length > 0">
+      <span class="chip-divider"></span>
+      <span class="chip-label">Etiqueta</span>
       <button
         type="button"
         class="badge badge-lg cursor-pointer transition-all"
@@ -86,17 +217,7 @@
       >
         {{ l.name }}
       </button>
-    </div>
-
-    <!-- Limpiar filtros -->
-    <button
-      *ngIf="hasActiveFilters()"
-      type="button"
-      class="btn btn-ghost btn-xs ml-auto text-base-content/40"
-      (click)="clearFilters()"
-    >
-      Limpiar filtros
-    </button>
+    </ng-container>
   </div>
 </div>
 
@@ -112,94 +233,30 @@
       <table class="table">
         <thead>
           <tr>
-            <th
-              class="no-wrap cursor-pointer select-none"
-              (click)="setSort('PLATFORM')"
-            >
-              <span class="inline-flex items-center gap-1">
-                Plataforma
-                <span class="text-base-content/30">{{
-                  sortIndicator("PLATFORM")
-                }}</span>
-              </span>
-            </th>
-            <th
-              class="no-wrap cursor-pointer select-none"
-              (click)="setSort('EMAIL')"
-            >
-              <span class="inline-flex items-center gap-1">
-                Email
-                <span class="text-base-content/30">{{
-                  sortIndicator("EMAIL")
-                }}</span>
-              </span>
-            </th>
+            <th class="no-wrap">Plataforma</th>
+            <th class="no-wrap">Email</th>
             <th class="no-wrap">Clave</th>
-            <th
-              class="no-wrap cursor-pointer select-none"
-              (click)="setSort('SUPPLIER')"
-            >
-              <span class="inline-flex items-center gap-1">
-                Proveedor
-                <span class="text-base-content/30">{{
-                  sortIndicator("SUPPLIER")
-                }}</span>
-              </span>
-            </th>
-            <th
-              class="no-wrap cursor-pointer select-none"
-              (click)="setSort('CUTOFF')"
-            >
-              <span class="inline-flex items-center gap-1">
-                Fecha corte
-                <span class="text-base-content/30">{{
-                  sortIndicator("CUTOFF")
-                }}</span>
-              </span>
-            </th>
-            <th
-              class="no-wrap cursor-pointer select-none"
-              (click)="setSort('ALERT')"
-            >
-              <span class="inline-flex items-center gap-1">
-                Alerta
-                <span class="text-base-content/30">{{
-                  sortIndicator("ALERT")
-                }}</span>
-              </span>
-            </th>
-            <th
-              class="no-wrap cursor-pointer select-none"
-              (click)="cycleProfilesSort()"
-            >
-              <span class="inline-flex items-center gap-1">
-                Perfiles
-                <span class="text-base-content/30 text-xs">{{
-                  profilesSortIndicator()
-                }}</span>
-              </span>
-            </th>
+            <th class="no-wrap">Proveedor</th>
+            <th class="no-wrap">Fecha corte</th>
+            <th class="no-wrap">Alerta</th>
+            <th class="no-wrap">Perfiles</th>
             <th class="no-wrap text-right">Acciones</th>
           </tr>
         </thead>
 
         <tbody>
-          <tr
-            *ngFor="let a of visibleAccountsList; trackBy: trackAccount"
-            class="hover cursor-pointer"
-            (click)="viewAccount.emit(a)"
-          >
+          <tr *ngFor="let a of visibleAccountsList; trackBy: trackAccount">
             <td class="no-wrap">
               <div class="font-medium">{{ a.platform?.name || "—" }}</div>
             </td>
 
-            <td class="no-wrap max-w-[220px]" [title]="a.email">
+            <td class="max-w-[220px]" [title]="a.email">
               <div class="flex items-center gap-2">
                 <span
                   class="h-2 w-2 rounded-full flex-shrink-0"
                   [ngClass]="(a.status | status).color"
                 ></span>
-                <span class="font-medium">{{ a.email }}</span>
+                <span class="font-medium break-all">{{ a.email }}</span>
               </div>
             </td>
 
@@ -223,24 +280,37 @@
                 {{ (a.cutoffDate | alert: a.status).label }}
               </span>
             </td>
-            <td class="no-wrap">
+            <td
+              class="cursor-pointer hover:bg-base-200 transition-colors"
+              (click)="viewAccount.emit(a)"
+            >
               <div class="flex items-center gap-1">
                 <div
                   *ngFor="let p of a.profiles"
-                  class="w-5 h-5 rounded-full flex items-center justify-center tooltip tooltip-top cursor-default"
-                  [ngClass]="profileDotClass(p)"
-                  [attr.data-tip]="profileDotTooltip(p)"
+                  class="flex flex-col items-center gap-0.5"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="w-3 h-3 text-base-100"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
+                  <!-- Dot -->
+                  <div
+                    class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                    [ngClass]="profileDotClass(p)"
                   >
-                    <path
-                      d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"
-                    />
-                  </svg>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="w-3 h-3 text-base-100"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <path
+                        d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"
+                      />
+                    </svg>
+                  </div>
+                  <!-- Texto debajo -->
+                  <span
+                    class="text-[10px] leading-tight text-base-content/50 whitespace-nowrap min-h-[14px] block"
+                  >
+                    {{ profileDotTooltip(p) }}
+                  </span>
                 </div>
               </div>
             </td>

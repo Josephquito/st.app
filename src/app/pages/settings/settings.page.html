@@ -172,6 +172,79 @@
     </div>
   </a>
 
+  <!-- Card: Agente WhatsApp -->
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body">
+      <div class="flex items-start justify-between gap-4 flex-wrap">
+        <!-- Ícono + info -->
+        <div class="flex items-center gap-3">
+          <div class="bg-base-200 rounded-lg p-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+              />
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-semibold">Agente WhatsApp</span>
+              <ng-container *ngIf="!loadingAgent && agentEnabled !== null">
+                <span *ngIf="agentEnabled" class="badge badge-success badge-sm">
+                  Encendido
+                </span>
+                <span *ngIf="!agentEnabled" class="badge badge-ghost badge-sm">
+                  Apagado
+                </span>
+              </ng-container>
+            </div>
+            <p class="text-sm text-base-content/60 mt-0.5">
+              <ng-container *ngIf="agentEnabled">
+                El agente está respondiendo mensajes automáticamente.
+              </ng-container>
+              <ng-container *ngIf="!agentEnabled">
+                El agente está pausado, los mensajes no serán respondidos.
+              </ng-container>
+            </p>
+          </div>
+        </div>
+
+        <!-- Acción -->
+        <div class="flex items-center gap-2 shrink-0">
+          <span
+            *ngIf="loadingAgent"
+            class="loading loading-spinner loading-sm"
+          ></span>
+
+          <button
+            *ngIf="!loadingAgent && agentEnabled !== null"
+            class="btn btn-sm"
+            [class.btn-error]="agentEnabled"
+            [class.btn-success]="!agentEnabled"
+            type="button"
+            (click)="toggleAgent()"
+          >
+            {{ agentEnabled ? 'Apagar agente' : 'Encender agente' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Error -->
+      <div *ngIf="agentError" class="alert alert-error mt-3">
+        <span>{{ agentError }}</span>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast -->
   <div *ngIf="toast" class="toast toast-end toast-bottom z-[99999]">
     <div

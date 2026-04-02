@@ -23,18 +23,15 @@ import { parseISODate, todayISO } from '../../utils/date.utils';
 import { parseApiError } from '../../utils/error.utils';
 import { ToastService } from '../toast/toast.service';
 
-type SortKey =
-  | 'ALERT'
-  | 'STATUS'
-  | 'PROFILES'
-  | 'PROFILES_AVAIL'
-  | 'PROFILES_CUTOFF'
-  | 'CUTOFF'
-  | 'PLATFORM'
-  | 'EMAIL'
-  | 'SUPPLIER'
-  | null;
-type SortDir = 'asc' | 'desc';
+type AccountAlertFilter = '' | 'EXPIRED' | 'TODAY' | '1_3_DAYS' | 'MORE_3_DAYS';
+type ProfileAlertFilter =
+  | ''
+  | 'AVAILABLE'
+  | 'EXPIRED'
+  | 'TODAY'
+  | '1_3_DAYS'
+  | 'MORE_3_DAYS'
+  | 'PAUSED';
 
 @Component({
   selector: 'app-accounts-table',
@@ -82,8 +79,8 @@ export class AccountsTableComponent {
   searchText = '';
   statusFilter: 'ACTIVE' | 'INACTIVE' | '' = '';
   labelFilter: number | '' = '';
-  sortKey: SortKey = 'ALERT';
-  sortDir: SortDir = 'asc';
+  accountAlertFilter: AccountAlertFilter = '';
+  profileAlertFilter: ProfileAlertFilter = '';
   visibleAccountsList: StreamingAccountDTO[] = [];
   copiedAccountId: number | null = null;
 
@@ -95,32 +92,22 @@ export class AccountsTableComponent {
 
   // ── Menú ──────────────────────────────────────────────────────────────────
 
-  // ── Menú ──────────────────────────────────────────────────────────────────
   toggleMenu(a: StreamingAccountDTO, ev: MouseEvent) {
     ev.stopPropagation();
-
     if (this.menuOpen && this.menuAccount?.id === a.id) {
       this.closeMenu();
       return;
     }
-
     const rect = (ev.currentTarget as HTMLElement).getBoundingClientRect();
-
-    const menuWidth = 192; // w-48
-    const approxMenuHeight = 260; // aproximado por la cantidad de opciones
+    const menuWidth = 192;
+    const approxMenuHeight = 260;
     const padding = 8;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-
-    // El menú se alinea al borde derecho del botón
-    // porque en el HTML usamos translateX(-100%)
     let x = rect.right;
-
     if (x > vw - padding) x = vw - padding;
     if (x < menuWidth + padding) x = menuWidth + padding;
-
     const openUp = rect.bottom + approxMenuHeight > vh - padding;
-
     this.menuX = x;
     this.menuY = openUp ? rect.top : rect.bottom;
     this.menuDirection = openUp ? 'up' : 'down';
@@ -169,44 +156,53 @@ export class AccountsTableComponent {
 
   setStatusFilter(value: 'ACTIVE' | 'INACTIVE' | '') {
     this.statusFilter = value;
+    this.searchText = '';
     this.recalcVisible();
   }
 
   setLabelFilter(value: number | '') {
     this.labelFilter = value;
+    this.searchText = '';
+    this.recalcVisible();
+  }
+
+  setAccountAlertFilter(value: AccountAlertFilter) {
+    this.accountAlertFilter = this.accountAlertFilter === value ? '' : value;
+    this.searchText = '';
+    this.recalcVisible();
+  }
+
+  setProfileAlertFilter(value: ProfileAlertFilter) {
+    this.profileAlertFilter = this.profileAlertFilter === value ? '' : value;
+    this.searchText = '';
     this.recalcVisible();
   }
 
   onFilterChange() {
+    this.statusFilter = '';
+    this.accountAlertFilter = '';
+    this.profileAlertFilter = '';
+    this.labelFilter = '';
     this.recalcVisible();
-  }
-
-  hasActiveFilters(): boolean {
-    return !!(this.searchText || this.statusFilter || this.labelFilter);
   }
 
   clearFilters() {
     this.searchText = '';
     this.statusFilter = '';
+    this.accountAlertFilter = '';
+    this.profileAlertFilter = '';
     this.labelFilter = '';
     this.recalcVisible();
   }
 
-  // ── Ordenamiento ──────────────────────────────────────────────────────────
-
-  setSort(key: Exclude<SortKey, null>) {
-    if (this.sortKey === key) {
-      this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
-    } else {
-      this.sortKey = key;
-      this.sortDir = 'asc';
-    }
-    this.recalcVisible();
-  }
-
-  sortIndicator(key: Exclude<SortKey, null>): string {
-    if (this.sortKey !== key) return '↕';
-    return this.sortDir === 'asc' ? '▲' : '▼';
+  hasActiveFilters(): boolean {
+    return !!(
+      this.searchText ||
+      this.statusFilter ||
+      this.accountAlertFilter ||
+      this.profileAlertFilter ||
+      this.labelFilter
+    );
   }
 
   // ── Helpers UI ────────────────────────────────────────────────────────────
@@ -231,94 +227,71 @@ export class AccountsTableComponent {
     return a.id;
   }
 
-  // ── Ranks para ordenamiento ───────────────────────────────────────────────
+  // ── Match filters ─────────────────────────────────────────────────────────
 
-  private alertRank(cutoffDate: any) {
-    const d = this.daysRemaining(cutoffDate);
-    if (d === null) return { group: 3, within: 0 };
-    if (d < 0) return { group: 0, within: Math.abs(d) };
-    if (d === 0) return { group: 1, within: 0 };
-    return { group: 2, within: d };
+  private getAccountAlertGroup(
+    cutoffDate: string | null | undefined,
+  ): 'EXPIRED' | 'TODAY' | '1_3_DAYS' | 'MORE_3_DAYS' | 'NONE' {
+    const days = this.daysRemaining(cutoffDate);
+    if (days === null) return 'NONE';
+    if (days < 0) return 'EXPIRED';
+    if (days === 0) return 'TODAY';
+    if (days <= 3) return '1_3_DAYS';
+    return 'MORE_3_DAYS';
   }
 
-  private statusRank(status: string): number {
-    return status?.toUpperCase() === 'ACTIVE' ? 0 : 1;
+  private matchesAccountAlertFilter(a: StreamingAccountDTO): boolean {
+    if (!this.accountAlertFilter) return true;
+    return this.getAccountAlertGroup(a.cutoffDate) === this.accountAlertFilter;
   }
 
-  private profilesRank(a: StreamingAccountDTO) {
-    const m = this.usedProfilesText(a).match(/(\d+)\s*\/\s*(\d+)/);
-    if (!m) return { used: 9999, total: 9999, ratio: 1 };
-    const used = Number(m[1]);
-    const total = Number(m[2]);
-    return { used, total, ratio: total > 0 ? used / total : 1 };
-  }
+  private matchesProfileAlertFilter(a: StreamingAccountDTO): boolean {
+    if (!this.profileAlertFilter) return true;
+    const profiles = a.profiles ?? [];
 
-  private profilesAvailRank(a: StreamingAccountDTO): number {
-    return (a.profiles ?? []).filter((p) => p.status === 'AVAILABLE').length;
-  }
-
-  private profilesCutoffRank(a: StreamingAccountDTO): number {
-    const soldDates = (a.profiles ?? [])
-      .map((p) => p.sales?.[0]?.cutoffDate)
-      .filter(Boolean)
-      .map((d) => new Date(d!).getTime());
-    if (soldDates.length === 0) return Infinity;
-    return Math.min(...soldDates);
-  }
-
-  private compareAccounts(
-    a: StreamingAccountDTO,
-    b: StreamingAccountDTO,
-  ): number {
-    const dir = this.sortDir === 'asc' ? 1 : -1;
-
-    switch (this.sortKey) {
-      case 'ALERT': {
-        const ra = this.alertRank(a.cutoffDate);
-        const rb = this.alertRank(b.cutoffDate);
-        if (ra.group !== rb.group) return (ra.group - rb.group) * dir;
-        if (ra.group === 0) return (rb.within - ra.within) * dir;
-        return (ra.within - rb.within) * dir;
-      }
-      case 'CUTOFF': {
-        const da = new Date(a.cutoffDate ?? '').getTime() || 0;
-        const db = new Date(b.cutoffDate ?? '').getTime() || 0;
-        return (da - db) * dir;
-      }
-      case 'STATUS':
-        return (this.statusRank(a.status) - this.statusRank(b.status)) * dir;
-      case 'PROFILES': {
-        const pa = this.profilesRank(a);
-        const pb = this.profilesRank(b);
-        if (pa.used !== pb.used) return (pa.used - pb.used) * dir;
-        if (pa.ratio !== pb.ratio) return (pa.ratio - pb.ratio) * dir;
-        return (pa.total - pb.total) * dir;
-      }
-      case 'PROFILES_AVAIL':
-        return (this.profilesAvailRank(a) - this.profilesAvailRank(b)) * dir;
-      case 'PROFILES_CUTOFF':
-        return (this.profilesCutoffRank(a) - this.profilesCutoffRank(b)) * dir;
-      case 'PLATFORM':
-        return (
-          (a.platform?.name ?? '').localeCompare(b.platform?.name ?? '') * dir
-        );
-      case 'EMAIL':
-        return a.email.localeCompare(b.email) * dir;
-      case 'SUPPLIER':
-        return (
-          (a.supplier?.name ?? '').localeCompare(b.supplier?.name ?? '') * dir
-        );
+    switch (this.profileAlertFilter) {
+      case 'AVAILABLE':
+        return profiles.some((p) => p.status === 'AVAILABLE');
+      case 'PAUSED':
+        return profiles.some((p) => p.sales?.[0]?.status === 'PAUSED');
+      case 'EXPIRED':
+        return profiles.some((p) => {
+          const sale = p.sales?.[0];
+          if (!sale || p.status !== 'SOLD') return false;
+          const days = this.daysRemaining(sale.cutoffDate);
+          return days !== null && days < 0;
+        });
+      case 'TODAY':
+        return profiles.some((p) => {
+          const sale = p.sales?.[0];
+          if (!sale || p.status !== 'SOLD') return false;
+          return this.daysRemaining(sale.cutoffDate) === 0;
+        });
+      case '1_3_DAYS':
+        return profiles.some((p) => {
+          const sale = p.sales?.[0];
+          if (!sale || p.status !== 'SOLD') return false;
+          const days = this.daysRemaining(sale.cutoffDate);
+          return days !== null && days >= 1 && days <= 3;
+        });
+      case 'MORE_3_DAYS':
+        return profiles.some((p) => {
+          const sale = p.sales?.[0];
+          if (!sale || p.status !== 'SOLD') return false;
+          const days = this.daysRemaining(sale.cutoffDate);
+          return days !== null && days > 3;
+        });
       default:
-        return 0;
+        return true;
     }
   }
 
-  // ── Recalc ────────────────────────────────────────────────────────────────
+  // ── Recalc — orden fijo, solo filtra ─────────────────────────────────────
 
   private recalcVisible() {
     const q = this.searchText.trim().toLowerCase();
 
-    let base = this._accounts.filter((a) => {
+    this.visibleAccountsList = this._accounts.filter((a) => {
       const matchSearch = q
         ? [a.platform?.name, a.email, a.password, a.supplier?.name, a.status]
             .join(' ')
@@ -336,28 +309,14 @@ export class AccountsTableComponent {
           )
         : true;
 
-      return matchSearch && matchStatus && matchLabel;
+      return (
+        matchSearch &&
+        matchStatus &&
+        matchLabel &&
+        this.matchesAccountAlertFilter(a) &&
+        this.matchesProfileAlertFilter(a)
+      );
     });
-
-    if (this.labelFilter) {
-      base = [...base].sort((a, b) => {
-        const aAvail = (a.profiles ?? []).filter(
-          (p) =>
-            p.status === 'AVAILABLE' && (p as any).labelId === this.labelFilter,
-        ).length;
-        const bAvail = (b.profiles ?? []).filter(
-          (p) =>
-            p.status === 'AVAILABLE' && (p as any).labelId === this.labelFilter,
-        ).length;
-        return bAvail - aAvail;
-      });
-      this.visibleAccountsList = base;
-      return;
-    }
-
-    this.visibleAccountsList = this.sortKey
-      ? [...base].sort((a, b) => this.compareAccounts(a, b))
-      : base;
   }
 
   // ── Dots ──────────────────────────────────────────────────────────────────
@@ -373,22 +332,24 @@ export class AccountsTableComponent {
   }
 
   profileDotTooltip(p: AccountProfileDTO): string {
-    if (p.status === 'AVAILABLE') {
-      const labelName = (p as any).label?.name;
-      return labelName ? `Disponible · ${labelName}` : 'Disponible';
-    }
+    if (p.status === 'AVAILABLE') return '';
+    if (p.status === 'BLOCKED') return '';
+
     const sale = p.sales?.[0];
-    if (!sale) return 'Vendido';
-    if (sale.status === 'PAUSED') return 'Pausado';
+    if (!sale) return '';
+    if (sale.status === 'PAUSED') return '';
+
     const cutoff = parseISODate(sale.cutoffDate);
     const today = parseISODate(todayISO())!;
-    if (!cutoff) return 'Vendido';
+    if (!cutoff) return '';
+
     const days = Math.ceil(
       (cutoff.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
     );
-    if (days < 0) return `Venció hace ${Math.abs(days)}d`;
-    if (days === 0) return 'Vence hoy';
-    return `Vence en ${days}d`;
+
+    if (days < 0) return `-${Math.abs(days)}d`;
+    if (days === 0) return 'Hoy';
+    return `${days}d`;
   }
 
   // ── Copy ──────────────────────────────────────────────────────────────────
@@ -407,37 +368,5 @@ export class AccountsTableComponent {
     setTimeout(() => {
       if (this.copiedAccountId === a.id) this.copiedAccountId = null;
     }, 2000);
-  }
-
-  cycleProfilesSort() {
-    if (this.sortKey === 'PROFILES_AVAIL' && this.sortDir === 'asc') {
-      // disponibilidad asc → disponibilidad desc
-      this.sortDir = 'desc';
-    } else if (this.sortKey === 'PROFILES_AVAIL' && this.sortDir === 'desc') {
-      // disponibilidad desc → vencimiento asc
-      this.sortKey = 'PROFILES_CUTOFF';
-      this.sortDir = 'asc';
-    } else if (this.sortKey === 'PROFILES_CUTOFF' && this.sortDir === 'asc') {
-      // vencimiento asc → vencimiento desc
-      this.sortDir = 'desc';
-    } else if (this.sortKey === 'PROFILES_CUTOFF' && this.sortDir === 'desc') {
-      // vencimiento desc → sin orden
-      this.sortKey = null;
-    } else {
-      // cualquier otro → disponibilidad asc
-      this.sortKey = 'PROFILES_AVAIL';
-      this.sortDir = 'asc';
-    }
-    this.recalcVisible();
-  }
-
-  profilesSortIndicator(): string {
-    if (this.sortKey === 'PROFILES_AVAIL') {
-      return this.sortDir === 'asc' ? '▲ disp' : '▼ disp';
-    }
-    if (this.sortKey === 'PROFILES_CUTOFF') {
-      return this.sortDir === 'asc' ? '▲ vence' : '▼ vence';
-    }
-    return '↕';
   }
 }

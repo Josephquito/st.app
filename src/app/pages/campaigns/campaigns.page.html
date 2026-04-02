@@ -1,0 +1,273 @@
+<div class="page">
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <h1 class="title">Campañas</h1>
+      <p class="subtitle">
+        <b>{{ visible.length }}</b> campaña{{ visible.length !== 1 ? 's' : '' }}
+      </p>
+    </div>
+    <button class="btn btn-neutral btn-sm" type="button" (click)="openCreate()">
+      + Nueva campaña
+    </button>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="errorMessage" class="alert alert-error">
+    <span>{{ errorMessage }}</span>
+  </div>
+
+  <!-- Filtros -->
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body py-3">
+      <div class="flex flex-col gap-3">
+        <!-- Buscador -->
+        <label class="input input-bordered flex items-center gap-2">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4 opacity-60 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+          <input
+            type="text"
+            class="grow"
+            placeholder="Buscar campaña..."
+            [(ngModel)]="searchText"
+          />
+          <button
+            *ngIf="searchText"
+            type="button"
+            class="opacity-40 hover:opacity-100 transition-opacity"
+            (click)="searchText = ''"
+          >
+            ✕
+          </button>
+        </label>
+
+        <!-- Filtro status -->
+        <div class="flex flex-wrap items-center gap-2">
+          <span
+            class="text-xs text-base-content/40 font-medium uppercase tracking-wide mr-1"
+          >
+            Estado
+          </span>
+          <button
+            *ngFor="let s of ['DRAFT','RUNNING','COMPLETED','PAUSED','CANCELLED']"
+            type="button"
+            class="badge badge-lg cursor-pointer transition-all"
+            [ngClass]="statusFilter === s ? 'badge-neutral' : 'badge-ghost opacity-50 hover:opacity-80'"
+            (click)="setStatusFilter(s)"
+          >
+            {{ statusLabel(s) }}
+          </button>
+          <button
+            *ngIf="hasActiveFilters"
+            type="button"
+            class="btn btn-ghost btn-xs ml-auto text-base-content/40"
+            (click)="clearFilters()"
+          >
+            Limpiar filtros
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="flex items-center gap-2 py-8 justify-center">
+    <span class="loading loading-spinner loading-md"></span>
+    <span>Cargando campañas...</span>
+  </div>
+
+  <!-- Tabla -->
+  <div *ngIf="!loading" class="card bg-base-100 shadow-sm">
+    <div class="card-body p-0">
+      <div class="overflow-x-auto">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Estado</th>
+              <th class="text-right">Contactos</th>
+              <th class="text-right">Enviados</th>
+              <th class="text-right">Respondieron</th>
+              <th class="text-right">Compraron</th>
+              <th class="text-right">Fallidos</th>
+              <th>Creada</th>
+              <th class="text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let c of visible"
+              class="hover row-click"
+              (click)="goToDetail(c.id)"
+            >
+              <!-- Nombre -->
+              <td class="no-wrap">
+                <div class="font-medium">{{ c.name }}</div>
+                <div *ngIf="c.segment" class="text-xs text-base-content/40">
+                  {{ c.segment }}
+                </div>
+              </td>
+
+              <!-- Estado -->
+              <td class="no-wrap">
+                <span class="badge badge-sm" [ngClass]="statusClass(c.status)">
+                  {{ statusLabel(c.status) }}
+                </span>
+              </td>
+
+              <!-- Contactos -->
+              <td class="text-right text-sm">{{ c.totalContacts }}</td>
+
+              <td class="text-right text-sm">
+                <span [class.opacity-40]="c.sentCount === 0">
+                  {{ c.sentCount }}
+                </span>
+              </td>
+
+              <!-- Respondieron -->
+              <td class="text-right text-sm">
+                <span
+                  class="text-success font-medium"
+                  *ngIf="c.respondedCount > 0"
+                >
+                  {{ c.respondedCount }}
+                </span>
+                <span
+                  *ngIf="c.respondedCount === 0"
+                  class="text-base-content/40"
+                  >0</span
+                >
+              </td>
+
+              <!-- Compraron -->
+              <td class="text-right text-sm">
+                <span
+                  class="text-info font-medium"
+                  *ngIf="c.purchasedCount > 0"
+                >
+                  {{ c.purchasedCount }}
+                </span>
+                <span
+                  *ngIf="c.purchasedCount === 0"
+                  class="text-base-content/40"
+                  >0</span
+                >
+              </td>
+
+              <!-- Fallidos -->
+              <td class="text-right text-sm">
+                <span class="text-error font-medium" *ngIf="c.failedCount > 0">
+                  {{ c.failedCount }}
+                </span>
+                <span *ngIf="c.failedCount === 0" class="text-base-content/40"
+                  >0</span
+                >
+              </td>
+
+              <!-- Creada -->
+              <td class="no-wrap text-sm text-base-content/60">
+                {{ c.createdAt | date:'dd/MM/yyyy' }}
+              </td>
+
+              <!-- Acciones -->
+              <td class="text-right no-wrap" (click)="$event.stopPropagation()">
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-sm !px-2"
+                  (click)="toggleMenu(c, $event)"
+                >
+                  ⋮
+                </button>
+              </td>
+            </tr>
+
+            <tr *ngIf="visible.length === 0">
+              <td colspan="9" class="text-center text-base-content/50 py-8">
+                No hay campañas que coincidan con los filtros.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Menú flotante -->
+  <div
+    *ngIf="menuOpen && menuCampaign"
+    class="fixed z-[3200]"
+    [style.left.px]="menuX"
+    [style.top.px]="menuY"
+    [style.transform]="menuDirection === 'up' ? 'translateY(calc(-100% - 6px))' : 'translateY(6px)'"
+    (click)="$event.stopPropagation()"
+  >
+    <div class="bg-base-100 shadow rounded-box w-48 border border-base-200">
+      <ul class="menu p-2">
+        <li>
+          <button
+            type="button"
+            (click)="goToDetail(menuCampaign!.id); closeMenu()"
+          >
+            Ver detalle
+          </button>
+        </li>
+        <li>
+          <button type="button" (click)="openEdit(menuCampaign!)">
+            Editar
+          </button>
+        </li>
+        <li>
+          <button
+            type="button"
+            class="text-error"
+            (click)="openDelete(menuCampaign!)"
+          >
+            Eliminar
+          </button>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div *ngIf="toast" class="toast toast-end toast-bottom z-[99999]">
+    <div
+      class="alert"
+      [class.alert-success]="toast.type === 'success'"
+      [class.alert-error]="toast.type === 'error'"
+    >
+      <span>{{ toast.message }}</span>
+    </div>
+  </div>
+
+  <!-- Modal crear/editar -->
+  <app-create-edit-campaign-modal
+    [open]="modalOpen"
+    [campaign]="campaignToEdit"
+    (close)="modalOpen = false; campaignToEdit = null"
+    (saved)="onSaved()"
+  />
+
+  <!-- Confirmar eliminar -->
+  <app-confirm-action-modal
+    [open]="confirmDeleteOpen"
+    title="¿Eliminar campaña?"
+    [message]="'Se eliminará la campaña ' + (campaignToDelete?.name ?? '') + ' y todos sus contactos.'"
+    confirmLabel="Eliminar"
+    [danger]="true"
+    [loading]="loadingDelete"
+    (confirm)="confirmDelete()"
+    (cancel)="cancelDelete()"
+  />
+</div>

@@ -98,5 +98,21 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/settings/settings.page').then((m) => m.SettingsPage),
   },
+  {
+    path: 'campaigns',
+    canActivate: [CompanySelectedGuard, PermissionGuard],
+    data: { permissions: ['CUSTOMERS:READ'] },
+    loadComponent: () =>
+      import('./pages/campaigns/campaigns.page').then((m) => m.CampaignsPage),
+  },
+  {
+    path: 'campaigns/:id',
+    canActivate: [CompanySelectedGuard, PermissionGuard],
+    data: { permissions: ['CUSTOMERS:READ'] },
+    loadComponent: () =>
+      import('./pages/campaign-detail/campaign-detail.page').then(
+        (m) => m.CampaignDetailPage,
+      ),
+  },
   { path: '**', redirectTo: 'companies' },
 ];

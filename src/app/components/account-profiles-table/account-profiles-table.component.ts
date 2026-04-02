@@ -113,4 +113,9 @@ export class AccountProfilesTableComponent {
     this.menuOpen = false;
     this.menuProfile = null;
   }
+  getProfileLabel(
+    p: AccountProfileDTO,
+  ): { name: string; color: string } | null {
+    return (p as any).label ?? null;
+  }
 }

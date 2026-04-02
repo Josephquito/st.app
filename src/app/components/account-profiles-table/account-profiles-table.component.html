@@ -5,6 +5,9 @@
         <ng-container *ngIf="!expanded">
           <th class="whitespace-nowrap">Cliente</th>
           <th class="whitespace-nowrap">Alerta</th>
+          <th *ngIf="accountLabels.length > 0" class="whitespace-nowrap">
+            Etiqueta
+          </th>
           <th class="whitespace-nowrap">Notas</th>
           <th class="whitespace-nowrap text-right">Acciones</th>
         </ng-container>
@@ -14,6 +17,9 @@
           <th class="whitespace-nowrap">PDV</th>
           <th class="whitespace-nowrap">F. Corte</th>
           <th class="whitespace-nowrap">Alerta</th>
+          <th *ngIf="accountLabels.length > 0" class="whitespace-nowrap">
+            Etiqueta
+          </th>
           <th class="whitespace-nowrap">Renovación</th>
           <th *ngIf="hasAnyPausedProfile()" class="whitespace-nowrap">Saldo</th>
           <th class="whitespace-nowrap">Notas</th>
@@ -59,6 +65,21 @@
                 ).label
               }}
             </span>
+          </td>
+          <td *ngIf="accountLabels.length > 0" class="whitespace-nowrap">
+            <span
+              *ngIf="getProfileLabel(p) as label"
+              class="badge badge-sm border-0"
+              [style.background-color]="label.color + '22'"
+              [style.color]="label.color"
+            >
+              {{ label.name }}
+            </span>
+            <span
+              *ngIf="!getProfileLabel(p)"
+              class="text-base-content/30 text-sm"
+              >—</span
+            >
           </td>
           <td class="whitespace-nowrap min-w-[160px] max-w-[200px]">
             <textarea
@@ -132,6 +153,22 @@
               }}
             </span>
           </td>
+          <!-- Etiqueta en vista expandida -->
+          <td *ngIf="accountLabels.length > 0" class="whitespace-nowrap">
+            <span
+              *ngIf="getProfileLabel(p) as label"
+              class="badge badge-sm border-0"
+              [style.background-color]="label.color + '22'"
+              [style.color]="label.color"
+            >
+              {{ label.name }}
+            </span>
+            <span
+              *ngIf="!getProfileLabel(p)"
+              class="text-base-content/30 text-sm"
+              >—</span
+            >
+          </td>
           <td class="whitespace-nowrap">
             <div class="flex items-center gap-2">
               <span
@@ -189,7 +226,19 @@
         <!-- AVAILABLE -->
         <td
           *ngIf="p.status === 'AVAILABLE'"
-          [attr.colspan]="expanded ? (hasAnyPausedProfile() ? 9 : 8) : 4"
+          [attr.colspan]="
+            expanded
+              ? hasAnyPausedProfile()
+                ? accountLabels.length > 0
+                  ? 10
+                  : 9
+                : accountLabels.length > 0
+                  ? 9
+                  : 8
+              : accountLabels.length > 0
+                ? 5
+                : 4
+          "
           class="text-center py-1"
         >
           <div class="flex items-center justify-center gap-2">
@@ -242,7 +291,19 @@
 
       <tr *ngIf="profiles.length === 0">
         <td
-          [attr.colspan]="expanded ? (hasAnyPausedProfile() ? 9 : 8) : 4"
+          [attr.colspan]="
+            expanded
+              ? hasAnyPausedProfile()
+                ? accountLabels.length > 0
+                  ? 10
+                  : 9
+                : accountLabels.length > 0
+                  ? 9
+                  : 8
+              : accountLabels.length > 0
+                ? 5
+                : 4
+          "
           class="text-center text-base-content/50 py-6"
         >
           No hay perfiles registrados.

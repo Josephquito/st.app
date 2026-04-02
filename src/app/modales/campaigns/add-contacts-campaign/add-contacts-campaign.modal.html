@@ -1,0 +1,220 @@
+<dialog class="modal" [class.modal-open]="open">
+  <div class="modal-box max-w-3xl">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-bold text-lg">Agregar contactos</h3>
+      <span *ngIf="selectedIds.size > 0" class="badge badge-neutral">
+        {{ selectedIds.size }} seleccionado{{ selectedIds.size !== 1 ? 's' : ''
+        }}
+      </span>
+    </div>
+
+    <div *ngIf="errorMessage" class="alert alert-error mb-3">
+      <span>{{ errorMessage }}</span>
+    </div>
+
+    <!-- Filtros -->
+    <div class="flex flex-col gap-2 mb-3">
+      <label class="input input-bordered input-sm flex items-center gap-2">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-4 w-4 opacity-60 shrink-0"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.3-4.3" />
+        </svg>
+        <input
+          type="text"
+          class="grow"
+          placeholder="Buscar por nombre o contacto..."
+          [(ngModel)]="searchText"
+          (ngModelChange)="onSearchChange()"
+        />
+        <button
+          *ngIf="searchText"
+          type="button"
+          class="opacity-40 hover:opacity-100"
+          (click)="searchText = ''; onSearchChange()"
+        >
+          ✕
+        </button>
+      </label>
+
+      <div class="flex flex-wrap gap-2 items-center">
+        <span
+          class="text-xs text-base-content/40 font-medium uppercase tracking-wide"
+        >
+          Estado
+        </span>
+        <button
+          *ngFor="let s of ['PROSPECT','ACTIVE','INACTIVE']"
+          type="button"
+          class="badge badge-lg cursor-pointer transition-all"
+          [ngClass]="statusFilter === s ? 'badge-neutral' : 'badge-ghost opacity-50 hover:opacity-80'"
+          (click)="statusFilter = statusFilter === s ? '' : s; onStatusChange()"
+        >
+          {{ statusLabel(s) }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div *ngIf="loading" class="flex justify-center py-6">
+      <span class="loading loading-spinner loading-md"></span>
+    </div>
+
+    <!-- Tabla -->
+    <div *ngIf="!loading" class="overflow-x-auto max-h-[400px] overflow-y-auto">
+      <table class="table table-sm">
+        <thead class="sticky top-0 bg-base-100 z-10">
+          <tr>
+            <th class="w-10">
+              <input
+                type="checkbox"
+                class="checkbox checkbox-sm"
+                [checked]="allPageSelected"
+                [disabled]="availableOnPage.length === 0"
+                (change)="toggleSelectAll()"
+              />
+            </th>
+            <th>Cliente</th>
+            <th>Contacto</th>
+            <th>Estado</th>
+            <th>Origen</th>
+            <th class="text-right">Ventas</th>
+            <th>Última compra</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let c of customers"
+            class="hover cursor-pointer"
+            [class.opacity-40]="isExisting(c.id)"
+            (click)="toggleSelect(c.id)"
+          >
+            <td (click)="$event.stopPropagation()">
+              <input
+                type="checkbox"
+                class="checkbox checkbox-sm"
+                [checked]="selectedIds.has(c.id) || isExisting(c.id)"
+                [disabled]="isExisting(c.id)"
+                (change)="toggleSelect(c.id)"
+              />
+            </td>
+
+            <!-- Cliente -->
+            <td class="whitespace-nowrap">
+              <div class="font-medium text-sm">{{ c.name }}</div>
+            </td>
+
+            <!-- Contacto -->
+            <td class="whitespace-nowrap text-sm text-base-content/60">
+              {{ c.contact }}
+            </td>
+
+            <!-- Estado -->
+            <td class="whitespace-nowrap">
+              <span *ngIf="isExisting(c.id)" class="badge badge-sm badge-info">
+                Ya agregado
+              </span>
+              <span
+                *ngIf="!isExisting(c.id)"
+                class="badge badge-sm"
+                [ngClass]="statusClass(c.customerStatus)"
+              >
+                {{ statusLabel(c.customerStatus) }}
+              </span>
+            </td>
+
+            <!-- Origen -->
+            <td class="whitespace-nowrap text-sm text-base-content/60">
+              {{ sourceLabel(c.source) }}
+            </td>
+
+            <!-- Ventas -->
+            <td class="text-right text-sm">
+              <span [class.opacity-40]="c.totalSales === 0">
+                {{ c.totalSales ?? 0 }}
+              </span>
+            </td>
+
+            <!-- Última compra -->
+            <td class="whitespace-nowrap text-sm text-base-content/60">
+              {{ c.lastPurchaseAt ? (c.lastPurchaseAt | date:'dd/MM/yyyy':'UTC')
+              : '—' }}
+            </td>
+          </tr>
+
+          <tr *ngIf="customers.length === 0">
+            <td colspan="7" class="text-center text-base-content/50 py-6">
+              No hay clientes que coincidan.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Paginación -->
+    <div
+      *ngIf="!loading && totalPages > 1"
+      class="flex items-center justify-between mt-3"
+    >
+      <span class="text-xs text-base-content/40">
+        Página {{ currentPage }} de {{ totalPages }} · {{ totalCustomers }}
+        clientes
+      </span>
+      <div class="join">
+        <button
+          class="join-item btn btn-xs"
+          [disabled]="currentPage === 1"
+          (click)="goToPage(currentPage - 1)"
+        >
+          «
+        </button>
+        <button class="join-item btn btn-xs btn-active">
+          {{ currentPage }}
+        </button>
+        <button
+          class="join-item btn btn-xs"
+          [disabled]="currentPage === totalPages"
+          (click)="goToPage(currentPage + 1)"
+        >
+          »
+        </button>
+      </div>
+    </div>
+
+    <div class="modal-action">
+      <button
+        class="btn"
+        type="button"
+        (click)="onClose()"
+        [disabled]="loadingAdd"
+      >
+        Cancelar
+      </button>
+      <button
+        class="btn btn-neutral"
+        type="button"
+        [disabled]="selectedIds.size === 0 || loadingAdd"
+        (click)="addSelected()"
+      >
+        <span
+          *ngIf="loadingAdd"
+          class="loading loading-spinner loading-sm"
+        ></span>
+        Agregar {{ selectedIds.size > 0 ? selectedIds.size : '' }} contacto{{
+        selectedIds.size !== 1 ? 's' : '' }}
+      </button>
+    </div>
+  </div>
+
+  <form method="dialog" class="modal-backdrop">
+    <button type="button" (click)="onClose()">close</button>
+  </form>
+</dialog>
