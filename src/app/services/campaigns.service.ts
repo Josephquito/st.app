@@ -144,4 +144,13 @@ export class CampaignsService {
       ),
     );
   }
+
+  updateStatus(
+    id: number,
+    status: 'DRAFT' | 'RUNNING' | 'COMPLETED',
+  ): Promise<CampaignDTO> {
+    return firstValueFrom(
+      this.http.patch<CampaignDTO>(`${this.base}/${id}/status`, { status }),
+    );
+  }
 }

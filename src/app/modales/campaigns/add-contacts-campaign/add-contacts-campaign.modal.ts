@@ -70,8 +70,8 @@ export class AddContactsCampaignModal implements OnChanges {
         search: this.searchText || undefined,
         status: (this.statusFilter as any) || undefined,
         page: this.currentPage,
-        limit: 20,
-        sortBy: 'name',
+        limit: 50, // ← de 20 a 50
+        sortBy: 'id' as any,
         sortOrder: 'asc',
       });
       this.customers = res.data;

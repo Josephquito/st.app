@@ -1,4 +1,10 @@
-import { Component, OnInit, HostListener, inject } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  HostListener,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -22,12 +28,13 @@ import { CreateEditCampaignModal } from '../../modales/campaigns/create-edit-cam
   templateUrl: './campaigns.page.html',
   styleUrl: './campaigns.page.css',
 })
-export class CampaignsPage implements OnInit {
+export class CampaignsPage implements OnInit, OnDestroy {
   private api = inject(CampaignsService);
   private router = inject(Router);
 
   campaigns: CampaignDTO[] = [];
   loading = false;
+  loadingStatus = false;
   errorMessage = '';
 
   searchText = '';
@@ -53,8 +60,16 @@ export class CampaignsPage implements OnInit {
   toast: { message: string; type: 'success' | 'error' } | null = null;
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
 
+  // Polling
+  private pollInterval: ReturnType<typeof setInterval> | null = null;
+
   ngOnInit() {
     this.load();
+    this.pollInterval = setInterval(() => this.silentRefresh(), 15000);
+  }
+
+  ngOnDestroy() {
+    if (this.pollInterval) clearInterval(this.pollInterval);
   }
 
   async load() {
@@ -66,6 +81,14 @@ export class CampaignsPage implements OnInit {
       this.errorMessage = parseApiError(e);
     } finally {
       this.loading = false;
+    }
+  }
+
+  private async silentRefresh() {
+    try {
+      this.campaigns = await this.api.findAll();
+    } catch {
+      /* silencioso */
     }
   }
 
@@ -115,10 +138,11 @@ export class CampaignsPage implements OnInit {
 
   async onSaved() {
     this.modalOpen = false;
+    const wasEdit = !!this.campaignToEdit;
     this.campaignToEdit = null;
     await this.load();
     this.showToast(
-      this.campaignToEdit ? 'Campaña actualizada.' : 'Campaña creada.',
+      wasEdit ? 'Campaña actualizada.' : 'Campaña creada.',
       'success',
     );
   }
@@ -152,6 +176,44 @@ export class CampaignsPage implements OnInit {
     this.campaignToDelete = null;
   }
 
+  // ── Estado ────────────────────────────────────────────────────────────────
+
+  canPublish(campaign: CampaignDTO): boolean {
+    return campaign.status === 'DRAFT';
+  }
+
+  canComplete(campaign: CampaignDTO): boolean {
+    return campaign.status === 'RUNNING';
+  }
+
+  async publishCampaign(campaign: CampaignDTO) {
+    this.loadingStatus = true;
+    try {
+      await this.api.updateStatus(campaign.id, 'RUNNING');
+      await this.load();
+      this.showToast('Campaña publicada.', 'success');
+    } catch (e: any) {
+      this.showToast(parseApiError(e), 'error');
+    } finally {
+      this.loadingStatus = false;
+      this.closeMenu();
+    }
+  }
+
+  async completeCampaign(campaign: CampaignDTO) {
+    this.loadingStatus = true;
+    try {
+      await this.api.updateStatus(campaign.id, 'COMPLETED');
+      await this.load();
+      this.showToast('Campaña completada.', 'success');
+    } catch (e: any) {
+      this.showToast(parseApiError(e), 'error');
+    } finally {
+      this.loadingStatus = false;
+      this.closeMenu();
+    }
+  }
+
   // ── Menú flotante ──────────────────────────────────────────────────────────
 
   toggleMenu(campaign: CampaignDTO, ev: MouseEvent) {
@@ -165,7 +227,7 @@ export class CampaignsPage implements OnInit {
     const btn = ev.currentTarget as HTMLElement;
     const rect = btn.getBoundingClientRect();
     const menuWidth = 192;
-    const approxMenuHeight = 120;
+    const approxMenuHeight = 140;
     const padding = 8;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
@@ -210,8 +272,6 @@ export class CampaignsPage implements OnInit {
       DRAFT: 'Borrador',
       RUNNING: 'En curso',
       COMPLETED: 'Completada',
-      PAUSED: 'Pausada',
-      CANCELLED: 'Cancelada',
     };
     return map[status] ?? status;
   }
@@ -221,8 +281,6 @@ export class CampaignsPage implements OnInit {
       DRAFT: 'badge-ghost',
       RUNNING: 'badge-success',
       COMPLETED: 'badge-info',
-      PAUSED: 'badge-warning',
-      CANCELLED: 'badge-error',
     };
     return map[status] ?? 'badge-ghost';
   }

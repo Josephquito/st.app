@@ -80,6 +80,15 @@
         >
           Reportes
         </button>
+        <button
+          *ngIf="auth.hasPermission('CUSTOMERS:READ')"
+          type="button"
+          class="menu-link"
+          routerLink="/campaigns"
+          routerLinkActive="active"
+        >
+          Campañas
+        </button>
       </ng-template>
 
       <!-- Submenu usuario desktop -->
@@ -278,7 +287,7 @@
     <button
       *ngIf="auth.hasPermission('STREAMING_ACCOUNTS:READ')"
       type="button"
-      class="menu-link"
+      class="mobile-link"
       routerLink="/profiles"
       routerLinkActive="active"
     >
@@ -293,6 +302,16 @@
       (click)="closeMobileMenu()"
     >
       Reportes
+    </button>
+    <button
+      *ngIf="auth.hasPermission('CUSTOMERS:READ')"
+      type="button"
+      class="mobile-link"
+      routerLink="/campaigns"
+      routerLinkActive="active"
+      (click)="closeMobileMenu()"
+    >
+      Campañas
     </button>
   </ng-template>
 

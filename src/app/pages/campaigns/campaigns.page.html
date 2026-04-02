@@ -60,7 +60,7 @@
             Estado
           </span>
           <button
-            *ngFor="let s of ['DRAFT','RUNNING','COMPLETED','PAUSED','CANCELLED']"
+            *ngFor="let s of ['DRAFT','RUNNING','COMPLETED']"
             type="button"
             class="badge badge-lg cursor-pointer transition-all"
             [ngClass]="statusFilter === s ? 'badge-neutral' : 'badge-ghost opacity-50 hover:opacity-80'"
@@ -214,20 +214,37 @@
   >
     <div class="bg-base-100 shadow rounded-box w-48 border border-base-200">
       <ul class="menu p-2">
-        <li>
+        <!-- Publicar — solo si DRAFT -->
+        <li *ngIf="canPublish(menuCampaign!)">
           <button
             type="button"
-            (click)="goToDetail(menuCampaign!.id); closeMenu()"
+            [disabled]="loadingStatus"
+            (click)="publishCampaign(menuCampaign!)"
           >
-            Ver detalle
+            Publicar
           </button>
         </li>
-        <li>
+
+        <!-- Completar — solo si RUNNING -->
+        <li *ngIf="canComplete(menuCampaign!)">
+          <button
+            type="button"
+            [disabled]="loadingStatus"
+            (click)="completeCampaign(menuCampaign!)"
+          >
+            Marcar completada
+          </button>
+        </li>
+
+        <!-- Editar — solo si DRAFT -->
+        <li *ngIf="menuCampaign!.status === 'DRAFT'">
           <button type="button" (click)="openEdit(menuCampaign!)">
             Editar
           </button>
         </li>
-        <li>
+
+        <!-- Eliminar — solo si DRAFT o COMPLETED -->
+        <li *ngIf="menuCampaign!.status !== 'RUNNING'">
           <button
             type="button"
             class="text-error"

@@ -30,7 +30,7 @@
         </svg>
         <input
           type="text"
-          class="grow"
+          class="grow min-w-0"
           placeholder="Buscar por nombre o contacto..."
           [(ngModel)]="searchText"
           (ngModelChange)="onSearchChange()"
@@ -38,7 +38,7 @@
         <button
           *ngIf="searchText"
           type="button"
-          class="opacity-40 hover:opacity-100"
+          class="opacity-40 hover:opacity-100 shrink-0"
           (click)="searchText = ''; onSearchChange()"
         >
           ✕

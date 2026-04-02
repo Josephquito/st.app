@@ -2,12 +2,16 @@
   <!-- Header -->
   <div class="header">
     <div class="flex items-center gap-3">
-      <button class="btn btn-ghost btn-sm" type="button" (click)="goBack()">
-        ← Volver
+      <button
+        class="btn btn-ghost btn-sm text-xl font-light px-2"
+        type="button"
+        (click)="goBack()"
+      >
+        ‹
       </button>
       <div>
         <div class="flex items-center gap-2 flex-wrap">
-          <h1 class="title">{{ campaign?.name ?? '...' }}</h1>
+          <h1 class="title">{{ campaign?.name ?? '-' }}</h1>
           <span
             *ngIf="campaign"
             class="badge badge-sm"
@@ -16,7 +20,6 @@
             {{ campaignStatusLabel(campaign.status) }}
           </span>
         </div>
-        <p class="subtitle">{{ campaign?.segment ?? '' }}</p>
       </div>
     </div>
     <button
@@ -41,63 +44,64 @@
 
   <ng-container *ngIf="!loading && campaign">
     <!-- Métricas -->
-    <div class="metrics-grid">
-      <div class="metric-card">
-        <div class="metric-value">{{ campaign.totalContacts }}</div>
-        <div class="metric-label">Total contactos</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-value text-info">{{ campaign.sentCount }}</div>
-        <div class="metric-label">Enviados</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-value text-warning">
-          {{ campaign.respondedCount }}
-        </div>
-        <div class="metric-label">Respondieron</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-value text-success">
-          {{ campaign.purchasedCount }}
-        </div>
-        <div class="metric-label">Compraron</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-value text-error">{{ campaign.failedCount }}</div>
-        <div class="metric-label">Fallidos</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-value">
-          {{ campaign.sentCount > 0 ? ((campaign.respondedCount /
-          campaign.sentCount) * 100 | number:'1.0-0') : 0 }}%
-        </div>
-        <div class="metric-label">Tasa de respuesta</div>
-      </div>
-    </div>
-
-    <!-- Mensaje preview -->
     <div class="card bg-base-100 shadow-sm">
-      <div class="card-body py-3">
-        <div class="flex gap-4 flex-wrap">
-          <div class="flex-1 min-w-0">
-            <p
-              class="text-xs text-base-content/40 font-medium uppercase tracking-wide mb-1"
-            >
-              Mensaje
-            </p>
-            <p class="text-sm whitespace-pre-wrap">{{ campaign.message }}</p>
+      <div class="card-body py-4">
+        <div class="flex gap-6 flex-wrap">
+          <!-- Métricas -->
+          <div class="metrics-grid flex-1">
+            <div class="metric-card">
+              <div class="metric-value">{{ campaign.totalContacts }}</div>
+              <div class="metric-label">Total</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value text-info">{{ campaign.sentCount }}</div>
+              <div class="metric-label">Enviados</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value text-warning">
+                {{ campaign.respondedCount }}
+              </div>
+              <div class="metric-label">Respondieron</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value text-success">
+                {{ campaign.purchasedCount }}
+              </div>
+              <div class="metric-label">Compraron</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value text-error">
+                {{ campaign.failedCount }}
+              </div>
+              <div class="metric-label">Fallidos</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value">
+                {{ campaign.sentCount > 0 ? ((campaign.respondedCount /
+                campaign.sentCount) * 100 | number:'1.0-0') : 0 }}%
+              </div>
+              <div class="metric-label">Respuesta</div>
+            </div>
           </div>
-          <div *ngIf="campaign.imageUrl" class="shrink-0">
-            <p
-              class="text-xs text-base-content/40 font-medium uppercase tracking-wide mb-1"
-            >
-              Imagen
-            </p>
+
+          <!-- Imagen + mensaje -->
+          <div class="flex flex-col gap-3 shrink-0 max-w-[160px]">
             <img
+              *ngIf="campaign.imageUrl"
               [src]="campaign.imageUrl"
               alt="Flyer"
-              class="h-24 w-24 object-cover rounded-box border border-base-200"
+              class="w-full rounded-box border border-base-200 object-cover"
             />
+            <div>
+              <p
+                class="text-xs text-base-content/40 font-medium uppercase tracking-wide mb-1"
+              >
+                Mensaje
+              </p>
+              <p class="text-sm whitespace-pre-wrap text-base-content/80">
+                {{ campaign.message }}
+              </p>
+            </div>
           </div>
         </div>
       </div>
