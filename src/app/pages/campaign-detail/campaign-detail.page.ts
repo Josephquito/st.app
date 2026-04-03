@@ -1,4 +1,10 @@
-import { Component, OnInit, HostListener, inject } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  HostListener,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -23,7 +29,7 @@ import { AddContactsCampaignModal } from '../../modales/campaigns/add-contacts-c
   templateUrl: './campaign-detail.page.html',
   styleUrl: './campaign-detail.page.css',
 })
-export class CampaignDetailPage implements OnInit {
+export class CampaignDetailPage implements OnInit, OnDestroy {
   private api = inject(CampaignsService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
@@ -34,14 +40,11 @@ export class CampaignDetailPage implements OnInit {
   existingContactIds: number[] = [];
 
   loading = false;
-  loadingContacts = false;
   errorMessage = '';
+  loadingActionId: number | null = null;
 
   // Selección
   selectedIds = new Set<number>();
-
-  // Envío
-  loadingSend = false;
 
   // Modal agregar contactos
   addContactsOpen = false;
@@ -62,6 +65,9 @@ export class CampaignDetailPage implements OnInit {
   toast: { message: string; type: 'success' | 'error' } | null = null;
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
 
+  // Polling
+  private pollInterval: ReturnType<typeof setInterval> | null = null;
+
   // Filtro
   statusFilter = '';
   searchText = '';
@@ -69,6 +75,11 @@ export class CampaignDetailPage implements OnInit {
   ngOnInit() {
     this.campaignId = Number(this.route.snapshot.paramMap.get('id'));
     this.load();
+    this.pollInterval = setInterval(() => this.silentRefresh(), 10000);
+  }
+
+  ngOnDestroy() {
+    if (this.pollInterval) clearInterval(this.pollInterval);
   }
 
   async load() {
@@ -81,7 +92,7 @@ export class CampaignDetailPage implements OnInit {
       ]);
       this.campaign = campaign;
       this.contacts = contacts;
-      this.existingContactIds = contacts.map((c) => c.customer.id); // ← agregar
+      this.existingContactIds = contacts.map((c) => c.customer.id);
     } catch (e: any) {
       this.errorMessage = parseApiError(e);
     } finally {
@@ -89,11 +100,29 @@ export class CampaignDetailPage implements OnInit {
     }
   }
 
+  private async silentRefresh() {
+    try {
+      const [campaign, contacts] = await Promise.all([
+        this.api.findOne(this.campaignId),
+        this.api.getContacts(this.campaignId),
+      ]);
+      this.campaign = campaign;
+      this.contacts = contacts;
+      this.existingContactIds = contacts.map((c) => c.customer.id);
+    } catch {
+      /* silencioso */
+    }
+  }
+
   async refreshContacts() {
     try {
-      this.contacts = await this.api.getContacts(this.campaignId);
-      this.campaign = await this.api.findOne(this.campaignId);
-      this.existingContactIds = this.contacts.map((c) => c.customer.id); // ← agregar
+      const [campaign, contacts] = await Promise.all([
+        this.api.findOne(this.campaignId),
+        this.api.getContacts(this.campaignId),
+      ]);
+      this.campaign = campaign;
+      this.contacts = contacts;
+      this.existingContactIds = contacts.map((c) => c.customer.id);
       this.selectedIds.clear();
     } catch (e: any) {
       this.errorMessage = parseApiError(e);
@@ -165,25 +194,52 @@ export class CampaignDetailPage implements OnInit {
     }
   }
 
-  // ── Envío ─────────────────────────────────────────────────────────────────
+  // ── Marcar enviado/pendiente manual ───────────────────────────────────────
 
-  async sendSelected() {
-    if (this.selectedIds.size === 0) return;
-    this.loadingSend = true;
+  async markSentManual(contact: CampaignContactDTO) {
+    this.loadingActionId = contact.id;
     try {
-      const result = await this.api.sendContacts(
-        this.campaignId,
-        Array.from(this.selectedIds),
+      await this.api.markSentManual(this.campaignId, contact.id);
+      await this.refreshContacts();
+    } catch (e: any) {
+      this.showToast(parseApiError(e), 'error');
+    } finally {
+      this.loadingActionId = null;
+    }
+  }
+
+  async markPendingManual(contact: CampaignContactDTO) {
+    this.loadingActionId = contact.id;
+    try {
+      await this.api.markPendingManual(this.campaignId, contact.id);
+      await this.refreshContacts();
+    } catch (e: any) {
+      this.showToast(parseApiError(e), 'error');
+    } finally {
+      this.loadingActionId = null;
+    }
+  }
+
+  // ── Marcar seleccionados como enviados ────────────────────────────────────
+
+  async markSelectedSent() {
+    if (this.selectedIds.size === 0) return;
+    this.loadingActionId = -1;
+    try {
+      await Promise.all(
+        Array.from(this.selectedIds).map((id) =>
+          this.api.markSentManual(this.campaignId, id),
+        ),
       );
       this.showToast(
-        `${result.queued} mensaje${result.queued !== 1 ? 's' : ''} encolado${result.queued !== 1 ? 's' : ''}.`,
+        `${this.selectedIds.size} contacto${this.selectedIds.size !== 1 ? 's' : ''} marcado${this.selectedIds.size !== 1 ? 's' : ''} como enviado.`,
         'success',
       );
       await this.refreshContacts();
     } catch (e: any) {
       this.showToast(parseApiError(e), 'error');
     } finally {
-      this.loadingSend = false;
+      this.loadingActionId = null;
     }
   }
 
@@ -227,7 +283,7 @@ export class CampaignDetailPage implements OnInit {
     this.contactToRemove = null;
   }
 
-  // ── Menú flotante ──────────────────────────────────────────────────────────
+  // ── Menú flotante ─────────────────────────────────────────────────────────
 
   toggleMenu(contact: CampaignContactDTO, ev: MouseEvent) {
     ev.stopPropagation();
@@ -307,8 +363,6 @@ export class CampaignDetailPage implements OnInit {
       DRAFT: 'Borrador',
       RUNNING: 'En curso',
       COMPLETED: 'Completada',
-      PAUSED: 'Pausada',
-      CANCELLED: 'Cancelada',
     };
     return map[status] ?? status;
   }
@@ -318,13 +372,11 @@ export class CampaignDetailPage implements OnInit {
       DRAFT: 'badge-ghost',
       RUNNING: 'badge-success',
       COMPLETED: 'badge-info',
-      PAUSED: 'badge-warning',
-      CANCELLED: 'badge-error',
     };
     return map[status] ?? 'badge-ghost';
   }
 
-  // ── Toast ──────────────────────────────────────────────────────────────────
+  // ── Toast ─────────────────────────────────────────────────────────────────
 
   private showToast(message: string, type: 'success' | 'error') {
     if (this.toastTimer) clearTimeout(this.toastTimer);

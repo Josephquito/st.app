@@ -1,16 +1,11 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
-export type CampaignStatus =
-  | 'DRAFT'
-  | 'RUNNING'
-  | 'COMPLETED'
-  | 'PAUSED'
-  | 'CANCELLED';
+export type CampaignStatus = 'DRAFT' | 'RUNNING' | 'COMPLETED';
 
 export type CampaignContactStatus =
   | 'PENDING'
@@ -100,6 +95,12 @@ export class CampaignsService {
     );
   }
 
+  updateStatus(id: number, status: CampaignStatus): Promise<CampaignDTO> {
+    return firstValueFrom(
+      this.http.patch<CampaignDTO>(`${this.base}/${id}/status`, { status }),
+    );
+  }
+
   // ── Contactos ──────────────────────────────────────────────────────────────
 
   getContacts(id: number): Promise<CampaignContactDTO[]> {
@@ -131,7 +132,33 @@ export class CampaignsService {
     );
   }
 
-  // ── Envío ──────────────────────────────────────────────────────────────────
+  // ── Estado de contacto manual ─────────────────────────────────────────────
+
+  markSentManual(
+    campaignId: number,
+    contactId: number,
+  ): Promise<{ ok: boolean }> {
+    return firstValueFrom(
+      this.http.patch<{ ok: boolean }>(
+        `${this.base}/${campaignId}/contacts/${contactId}/mark-sent`,
+        {},
+      ),
+    );
+  }
+
+  markPendingManual(
+    campaignId: number,
+    contactId: number,
+  ): Promise<{ ok: boolean }> {
+    return firstValueFrom(
+      this.http.patch<{ ok: boolean }>(
+        `${this.base}/${campaignId}/contacts/${contactId}/mark-pending`,
+        {},
+      ),
+    );
+  }
+
+  // ── Envío por bot ──────────────────────────────────────────────────────────
 
   sendContacts(
     campaignId: number,
@@ -142,15 +169,6 @@ export class CampaignsService {
         `${this.base}/${campaignId}/send`,
         { campaignContactIds },
       ),
-    );
-  }
-
-  updateStatus(
-    id: number,
-    status: 'DRAFT' | 'RUNNING' | 'COMPLETED',
-  ): Promise<CampaignDTO> {
-    return firstValueFrom(
-      this.http.patch<CampaignDTO>(`${this.base}/${id}/status`, { status }),
     );
   }
 }

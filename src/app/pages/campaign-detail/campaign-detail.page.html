@@ -172,22 +172,23 @@
     </div>
 
     <!-- Botón enviar seleccionados -->
+    <!-- Botón marcar seleccionados como enviados -->
     <div *ngIf="selectedIds.size > 0" class="send-bar">
       <span class="text-sm font-medium">
         {{ selectedIds.size }} contacto{{ selectedIds.size !== 1 ? 's' : '' }}
         seleccionado{{ selectedIds.size !== 1 ? 's' : '' }}
       </span>
       <button
-        class="btn btn-success btn-sm"
+        class="btn btn-neutral btn-sm"
         type="button"
-        (click)="sendSelected()"
-        [disabled]="loadingSend"
+        (click)="markSelectedSent()"
+        [disabled]="loadingActionId === -1"
       >
         <span
-          *ngIf="loadingSend"
+          *ngIf="loadingActionId === -1"
           class="loading loading-spinner loading-xs"
         ></span>
-        Enviar seleccionados
+        <span *ngIf="loadingActionId !== -1">Marcar enviados ✓</span>
       </button>
     </div>
 
@@ -302,14 +303,62 @@
                   class="text-right no-wrap"
                   (click)="$event.stopPropagation()"
                 >
-                  <button
-                    type="button"
-                    class="btn btn-ghost btn-sm !px-2"
-                    [disabled]="c.status !== 'PENDING'"
-                    (click)="toggleMenu(c, $event)"
-                  >
-                    ⋮
-                  </button>
+                  <div class="flex items-center justify-end gap-1">
+                    <!-- PENDING: marcar enviado + quitar -->
+                    <ng-container *ngIf="c.status === 'PENDING'">
+                      <button
+                        type="button"
+                        class="btn btn-neutral btn-xs"
+                        [disabled]="loadingActionId === c.id"
+                        (click)="markSentManual(c)"
+                      >
+                        <span
+                          *ngIf="loadingActionId === c.id"
+                          class="loading loading-spinner loading-xs"
+                        ></span>
+                        <span *ngIf="loadingActionId !== c.id">Enviado ✓</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-ghost btn-sm !px-2"
+                        (click)="toggleMenu(c, $event)"
+                      >
+                        ⋮
+                      </button>
+                    </ng-container>
+
+                    <!-- SENT: revertir a pendiente -->
+                    <ng-container *ngIf="c.status === 'SENT'">
+                      <button
+                        type="button"
+                        class="btn btn-ghost btn-xs text-warning"
+                        [disabled]="loadingActionId === c.id"
+                        (click)="markPendingManual(c)"
+                      >
+                        <span
+                          *ngIf="loadingActionId === c.id"
+                          class="loading loading-spinner loading-xs"
+                        ></span>
+                        <span *ngIf="loadingActionId !== c.id">Revertir</span>
+                      </button>
+                    </ng-container>
+
+                    <!-- FAILED: marcar enviado manualmente -->
+                    <ng-container *ngIf="c.status === 'FAILED'">
+                      <button
+                        type="button"
+                        class="btn btn-neutral btn-xs"
+                        [disabled]="loadingActionId === c.id"
+                        (click)="markSentManual(c)"
+                      >
+                        <span
+                          *ngIf="loadingActionId === c.id"
+                          class="loading loading-spinner loading-xs"
+                        ></span>
+                        <span *ngIf="loadingActionId !== c.id">Enviado ✓</span>
+                      </button>
+                    </ng-container>
+                  </div>
                 </td>
               </tr>
 
