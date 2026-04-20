@@ -90,9 +90,6 @@ export class CuentasPage implements OnInit {
   changeStatusOpen = false;
   loadingDelete = false;
 
-  currentLimit = 1000;
-  totalLoaded = 0;
-
   manageLabelsOpen = false;
 
   get canPlatformsCreate() {
@@ -137,15 +134,11 @@ export class CuentasPage implements OnInit {
           ? this.platformsApi.findAll()
           : Promise.resolve([]),
         this.canAccountsRead
-          ? this.accountsApi.findAll(
-              this.currentLimit,
-              this.activePlatformId ?? undefined, // ← pasa el filtro
-            )
+          ? this.accountsApi.findAll(1000, this.activePlatformId ?? undefined)
           : Promise.resolve([]),
       ]);
       this.platforms = platforms;
       this.accounts = accounts;
-      this.totalLoaded = accounts.length;
 
       if (
         this.activePlatformId &&
@@ -154,18 +147,13 @@ export class CuentasPage implements OnInit {
         this.activePlatformId = null;
       }
 
-      this.filteredAccounts = [...this.accounts]; // ← ya viene filtrado del backend
+      this.filteredAccounts = [...this.accounts];
       await this.loadLabels();
     } catch (e: any) {
       this.errorMessage = parseApiError(e);
     } finally {
       this.loading = false;
     }
-  }
-
-  async loadMore() {
-    this.currentLimit += 100;
-    await this.load();
   }
 
   async loadLabels() {
@@ -180,8 +168,7 @@ export class CuentasPage implements OnInit {
 
   onFilterChange(id: number | null) {
     this.activePlatformId = id;
-    this.currentLimit = 100;
-    this.load(); // load() ya llama loadLabels() adentro
+    this.load();
   }
 
   openCreatePlatform() {

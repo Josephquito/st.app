@@ -38,7 +38,6 @@
     [loading]="loading"
     [canUpdate]="canAccountsUpdate"
     [canDelete]="canAccountsDelete"
-    [showLoadMore]="totalLoaded >= currentLimit"
     [labels]="labels"
     (viewAccount)="onViewAccount($event)"
     (editAccount)="onEditAccount($event)"
@@ -47,7 +46,6 @@
     (changePassword)="onChangePassword($event)"
     (deleteAccount)="onDeleteAccount($event)"
     (refreshAccounts)="load()"
-    (loadMore)="loadMore()"
   />
 
   <!-- Modales plataformas -->
