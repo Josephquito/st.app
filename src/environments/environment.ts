@@ -1,4 +1,4 @@
 export const environment = {
   production: false,
-  apiUrl: 'https://piensaback.onrender.com',
+  apiUrl: 'https://intranet-api.jotavix.com',
 };
