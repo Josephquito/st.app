@@ -11,6 +11,7 @@ import { FormsModule } from '@angular/forms';
 import {
   CampaignsService,
   CampaignDTO,
+  CampaignSegment,
 } from '../../../services/campaigns.service';
 import { parseApiError } from '../../../utils/error.utils';
 
@@ -33,11 +34,10 @@ export class CreateEditCampaignModal implements OnChanges {
   loading = false;
   errorMessage = '';
 
-  // Campos
   name = '';
   message = '';
   imageUrl = '';
-  segment = 'ALL';
+  segment: CampaignSegment = 'ALL';
 
   get isEdit(): boolean {
     return !!this.campaign;
@@ -50,7 +50,7 @@ export class CreateEditCampaignModal implements OnChanges {
         this.name = this.campaign.name;
         this.message = this.campaign.message;
         this.imageUrl = this.campaign.imageUrl ?? '';
-        this.segment = this.campaign.segment ?? 'ALL';
+        this.segment = (this.campaign.segment ?? 'ALL') as CampaignSegment;
       } else {
         this.reset();
       }
@@ -89,7 +89,7 @@ export class CreateEditCampaignModal implements OnChanges {
         name: this.name.trim(),
         message: this.message.trim(),
         imageUrl: this.imageUrl.trim() || undefined,
-        segment: this.segment || 'ALL',
+        segment: (this.segment || 'ALL') as CampaignSegment,
       };
 
       if (this.isEdit) {

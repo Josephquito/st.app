@@ -46,9 +46,6 @@ export type StreamingAccountDTO = {
   totalCost: string;
   notes: string | null;
   status: StreamingAccountStatus;
-  replacedByEmail?: string | null;
-  replacedAt?: string | null;
-  replacementNote?: string | null;
   createdAt?: string;
   updatedAt?: string;
   platform?: PlatformDTO;

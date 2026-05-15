@@ -7,6 +7,8 @@ import { environment } from '../../environments/environment';
 
 export type CampaignStatus = 'DRAFT' | 'RUNNING' | 'COMPLETED';
 
+export type CampaignSegment = 'ALL' | 'HOT' | 'WARM' | 'COLD' | 'PROSPECT';
+
 export type CampaignContactStatus =
   | 'PENDING'
   | 'SENT'
@@ -21,13 +23,12 @@ export type CampaignDTO = {
   message: string;
   imageUrl: string | null;
   status: CampaignStatus;
-  segment: string | null;
+  segment: CampaignSegment | null;
   totalContacts: number;
   sentCount: number;
   respondedCount: number;
   purchasedCount: number;
   failedCount: number;
-  ignoredCount: number;
   startedAt: string | null;
   completedAt: string | null;
   createdAt: string;
@@ -50,12 +51,11 @@ export type CampaignContactDTO = {
     _count: { sales: number };
   };
 };
-
 export type CreateCampaignDto = {
   name: string;
   message: string;
   imageUrl?: string;
-  segment?: string;
+  segment?: CampaignSegment;
 };
 
 export type UpdateCampaignDto = Partial<CreateCampaignDto>;
