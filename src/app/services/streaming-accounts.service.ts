@@ -22,12 +22,26 @@ export type ProfileLabelDTO = {
 
 export type AccountProfileDTO = {
   id: number;
-  accountId: number;
+  accountId?: number;
   profileNo: number;
   status: ProfileStatus;
   labelId?: number | null;
   label?: ProfileLabelDTO | null;
-  sales?: { cutoffDate: string; status: 'ACTIVE' | 'PAUSED' | 'EXPIRED' }[]; // ← agrega EXPIRED
+  sales?: {
+    id: number;
+    salePrice: string;
+    saleDate: string;
+    daysAssigned: number;
+    cutoffDate: string;
+    notes: string | null;
+    status: 'ACTIVE' | 'PAUSED' | 'EXPIRED';
+    renewalStatus: 'NOT_APPLICABLE' | 'PENDING' | 'SENT';
+    pausedAt: string | null;
+    pausedDaysLeft: number | null;
+    creditAmount: string | null;
+    creditRefunded: boolean;
+    customer: { id: number; name: string; contact: string } | null;
+  }[];
   createdAt?: string;
   updatedAt?: string;
 };

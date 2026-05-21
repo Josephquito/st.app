@@ -1,0 +1,441 @@
+<div class="w-full overflow-x-auto">
+  <!-- Toolbar -->
+  <div
+    class="flex items-center justify-between px-3 py-2 border-b border-base-300 bg-base-100"
+  >
+    <span class="text-sm text-base-content/60">
+      {{ visibleAccounts.length }} cuentas
+      @if (visibleDrafts.length > 0) {
+        · {{ visibleDrafts.length }} borrador(es)
+      }
+    </span>
+    <button class="btn btn-sm btn-neutral" (click)="addDraft()">
+      + Nueva cuenta
+    </button>
+  </div>
+
+  <table class="table table-xs w-full text-xs border-collapse">
+    <!-- BORRADORES -->
+    @for (draft of visibleDrafts; track draft._id) {
+      <tbody>
+        <!-- Header plataforma borrador -->
+        <tr>
+          <td
+            colspan="12"
+            class="bg-warning text-warning-content text-center font-bold text-xs py-1 tracking-widest uppercase"
+          >
+            BORRADOR
+          </td>
+        </tr>
+
+        <!-- Header columnas cuenta -->
+        <tr
+          class="bg-neutral text-neutral-content text-[10px] uppercase tracking-wide"
+        >
+          <th class="w-8">#</th>
+          <th class="min-w-[160px]">Correo</th>
+          <th class="min-w-[100px]">Clave</th>
+          <th class="min-w-[80px]">Costo</th>
+          <th class="min-w-[100px]">Proveedor</th>
+          <th class="min-w-[95px]">F. compra</th>
+          <th class="min-w-[50px]">Días</th>
+          <th class="min-w-[95px]">F. corte</th>
+          <th class="min-w-[65px]">Aviso</th>
+          <th class="min-w-[80px]">Estado</th>
+          <th class="min-w-[120px]">Notas</th>
+          <th class="w-16"></th>
+        </tr>
+
+        <!-- Fila datos borrador -->
+        <tr class="bg-warning/10 border-l-4 border-warning">
+          <td class="text-center text-base-content/30">~</td>
+          <td>
+            <input
+              class="input input-xs input-bordered w-full font-mono"
+              [(ngModel)]="draft.email"
+              placeholder="correo@ejemplo.com"
+            />
+          </td>
+          <td>
+            <input
+              class="input input-xs input-bordered w-full font-mono"
+              [(ngModel)]="draft.password"
+              placeholder="Clave"
+            />
+          </td>
+          <td>
+            <input
+              class="input input-xs input-bordered w-full"
+              [(ngModel)]="draft.totalCost"
+              placeholder="0.00"
+              type="number"
+              min="0"
+              step="0.01"
+            />
+          </td>
+          <td>
+            <input
+              class="input input-xs input-bordered w-full"
+              [(ngModel)]="draft.supplierId"
+              placeholder="ID proveedor"
+              type="number"
+            />
+          </td>
+          <td>
+            <input
+              class="input input-xs input-bordered w-full"
+              [(ngModel)]="draft.purchaseDate"
+              type="date"
+            />
+          </td>
+          <td>
+            <input
+              class="input input-xs input-bordered w-full"
+              [(ngModel)]="draft.durationDays"
+              placeholder="30"
+              type="number"
+              min="1"
+            />
+          </td>
+          <td>
+            <input
+              class="input input-xs input-bordered w-full"
+              [(ngModel)]="draft.cutoffDate"
+              type="date"
+            />
+          </td>
+          <td class="text-center text-base-content/30">—</td>
+          <td><span class="badge badge-warning badge-sm">Borrador</span></td>
+          <td>
+            <input
+              class="input input-xs input-bordered w-full"
+              [(ngModel)]="draft.notes"
+              placeholder="Notas..."
+            />
+          </td>
+          <td>
+            <div class="flex items-center gap-1">
+              <button
+                class="btn btn-xs btn-success"
+                [disabled]="
+                  !isDraftComplete(draft) || savingDraftId === draft._id
+                "
+                (click)="saveDraft(draft)"
+              >
+                @if (savingDraftId === draft._id) {
+                  <span class="loading loading-spinner loading-xs"></span>
+                } @else {
+                  ✓
+                }
+              </button>
+              <button
+                class="btn btn-xs btn-ghost text-error"
+                (click)="removeDraft(draft._id)"
+              >
+                ✕
+              </button>
+            </div>
+          </td>
+        </tr>
+
+        @if (errorByDraftId[draft._id]) {
+          <tr class="bg-error/10">
+            <td colspan="12" class="text-error text-xs px-4 py-1">
+              {{ errorByDraftId[draft._id] }}
+            </td>
+          </tr>
+        }
+
+        <!-- Header perfiles bloqueado -->
+        <tr
+          class="bg-neutral text-neutral-content text-[10px] uppercase tracking-wide"
+        >
+          <th></th>
+          <th>Etiqueta</th>
+          <th>PDV</th>
+          <th>Cliente</th>
+          <th>F. venta</th>
+          <th>Días</th>
+          <th>F. corte</th>
+          <th>Aviso</th>
+          <th>Renovación</th>
+          <th>Saldo</th>
+          <th>Notas</th>
+          <th></th>
+        </tr>
+
+        <tr class="bg-base-200/30">
+          <td
+            colspan="12"
+            class="text-center text-[10px] text-base-content/40 py-2 italic"
+          >
+            Los perfiles aparecerán al guardar la cuenta
+          </td>
+        </tr>
+      </tbody>
+    }
+
+    <!-- CUENTAS REALES -->
+    @for (account of visibleAccounts; track account.id; let i = $index) {
+      <tbody>
+        <!-- Header plataforma -->
+        <tr>
+          <td
+            colspan="12"
+            class="text-center font-bold text-xs py-1 tracking-widest uppercase text-white"
+            [ngClass]="{
+              'bg-error': account.status === 'EXPIRED',
+              'bg-neutral':
+                account.status === 'ACTIVE' || account.status === 'INACTIVE',
+            }"
+          >
+            {{ account.platform?.name ?? "—" }}
+          </td>
+        </tr>
+
+        <!-- Header columnas cuenta -->
+        <tr
+          class="bg-neutral text-neutral-content text-[10px] uppercase tracking-wide"
+        >
+          <th class="w-8">#</th>
+          <th>Correo</th>
+          <th>Clave</th>
+          <th>Costo</th>
+          <th>Proveedor</th>
+          <th>F. compra</th>
+          <th>Días</th>
+          <th>F. corte</th>
+          <th>Aviso</th>
+          <th>Estado</th>
+          <th>Notas</th>
+          <th></th>
+        </tr>
+
+        <!-- Fila datos cuenta -->
+        <tr
+          class="hover:bg-base-100"
+          [ngClass]="{
+            'bg-red-50': account.status === 'EXPIRED',
+            'bg-gray-100': account.status === 'INACTIVE',
+          }"
+        >
+          <td class="text-center text-base-content/40 font-mono">
+            {{ i + 1 }}
+          </td>
+          <td class="font-mono text-xs">{{ account.email }}</td>
+          <td class="font-mono text-xs">{{ account.password }}</td>
+          <td class="text-right font-mono">${{ account.totalCost }}</td>
+          <td>{{ account.supplier?.name ?? "—" }}</td>
+          <td class="font-mono">{{ formatDate(account.purchaseDate) }}</td>
+          <td class="text-center font-mono">{{ account.durationDays }}</td>
+          <td class="font-mono">{{ formatDate(account.cutoffDate) }}</td>
+          <td class="text-center">
+            <span
+              class="badge badge-sm"
+              [class.badge-success]="
+                getAlertLabel(account.cutoffDate).type === 'ok'
+              "
+              [class.badge-warning]="
+                getAlertLabel(account.cutoffDate).type === 'warn'
+              "
+              [class.badge-error]="
+                getAlertLabel(account.cutoffDate).type === 'danger'
+              "
+            >
+              {{ getAlertLabel(account.cutoffDate).text }}
+            </span>
+          </td>
+          <td>
+            <span
+              class="badge badge-sm"
+              [class.badge-success]="account.status === 'ACTIVE'"
+              [class.badge-error]="account.status === 'EXPIRED'"
+              [class.badge-neutral]="account.status === 'INACTIVE'"
+            >
+              {{ account.status }}
+            </span>
+          </td>
+          <td class="text-base-content/60 max-w-[120px] truncate">
+            {{ account.notes ?? "—" }}
+          </td>
+          <td>
+            <div class="dropdown dropdown-end">
+              <button tabindex="0" class="btn btn-xs btn-ghost">⋮</button>
+              <ul
+                tabindex="0"
+                class="dropdown-content menu menu-xs bg-base-100 rounded-box shadow border border-base-300 z-50 w-36"
+              >
+                <li><a (click)="renewAccount.emit(account)">Renovar</a></li>
+                <li>
+                  <a (click)="replaceAccount.emit(account)">Reemplazar</a>
+                </li>
+                <li>
+                  <a class="text-error" (click)="deleteAccount.emit(account)"
+                    >Eliminar</a
+                  >
+                </li>
+              </ul>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Header columnas perfiles -->
+        <tr
+          class="bg-neutral text-neutral-content text-[10px] uppercase tracking-wide"
+        >
+          <th></th>
+          <th>Etiqueta</th>
+          <th>PDV</th>
+          <th>Cliente</th>
+          <th>F. venta</th>
+          <th>Días</th>
+          <th>F. corte</th>
+          <th>Aviso</th>
+          <th>Renovación</th>
+          <th>Saldo</th>
+          <th>Notas</th>
+          <th></th>
+        </tr>
+
+        <!-- Filas perfiles -->
+        @for (profile of account.profiles ?? []; track profile.id) {
+          @let sale = getActiveSale(profile);
+          <tr
+            class="hover:bg-base-100/60 text-[11px]"
+            [ngClass]="{ 'opacity-50': profile.status === 'BLOCKED' }"
+          >
+            <td class="text-center">
+              <span class="text-base-content/50 font-mono"
+                >P{{ profile.profileNo }}</span
+              >
+            </td>
+            <td>
+              @if (profile.label) {
+                <span
+                  class="badge badge-sm text-white"
+                  [style.background-color]="profile.label.color"
+                >
+                  {{ profile.label.name }}
+                </span>
+              } @else {
+                <span class="text-base-content/30">—</span>
+              }
+            </td>
+            <td class="font-mono text-right">
+              @if (sale) {
+                ${{ sale.salePrice }}
+              } @else {
+                <span class="text-base-content/30">—</span>
+              }
+            </td>
+            <td>
+              @if (sale?.customer) {
+                <span class="font-medium">{{ sale!.customer!.name }}</span>
+              } @else if (profile.status === "AVAILABLE") {
+                <span class="text-success italic text-[10px]">Disponible</span>
+              } @else {
+                <span class="text-base-content/30">—</span>
+              }
+            </td>
+            <td class="font-mono">
+              @if (sale?.saleDate) {
+                {{ formatDate(sale!.saleDate) }}
+              } @else {
+                <span class="text-base-content/30">—</span>
+              }
+            </td>
+            <td class="text-center font-mono">
+              @if (sale?.daysAssigned) {
+                {{ sale!.daysAssigned }}
+              } @else {
+                <span class="text-base-content/30">—</span>
+              }
+            </td>
+            <td class="font-mono">
+              @if (sale?.cutoffDate) {
+                {{ formatDate(sale!.cutoffDate) }}
+              } @else {
+                <span class="text-base-content/30">—</span>
+              }
+            </td>
+            <td class="text-center">
+              @if (sale?.cutoffDate) {
+                <span
+                  class="badge badge-sm"
+                  [class.badge-success]="
+                    getAlertLabel(sale!.cutoffDate).type === 'ok'
+                  "
+                  [class.badge-warning]="
+                    getAlertLabel(sale!.cutoffDate).type === 'warn'
+                  "
+                  [class.badge-error]="
+                    getAlertLabel(sale!.cutoffDate).type === 'danger'
+                  "
+                >
+                  {{ getAlertLabel(sale!.cutoffDate).text }}
+                </span>
+              } @else {
+                <span class="text-base-content/30">—</span>
+              }
+            </td>
+            <td class="text-center">
+              @if (
+                sale?.renewalStatus && sale!.renewalStatus !== "NOT_APPLICABLE"
+              ) {
+                <span
+                  class="badge badge-xs"
+                  [class.badge-warning]="sale!.renewalStatus === 'PENDING'"
+                  [class.badge-success]="sale!.renewalStatus === 'SENT'"
+                >
+                  {{ sale!.renewalStatus }}
+                </span>
+              } @else {
+                <span class="text-base-content/30">—</span>
+              }
+            </td>
+            <td class="font-mono text-right">
+              @if (sale?.creditAmount) {
+                ${{ sale!.creditAmount }}
+              } @else {
+                <span class="text-base-content/30">—</span>
+              }
+            </td>
+            <td class="text-base-content/60 max-w-[120px] truncate">
+              {{ sale?.notes ?? "—" }}
+            </td>
+            <td>
+              @if (profile.status === "AVAILABLE" && canSell) {
+                <button class="btn btn-xs btn-outline btn-success">
+                  Vender
+                </button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    }
+
+    <!-- Empty state -->
+    @if (
+      visibleAccounts.length === 0 && visibleDrafts.length === 0 && !loading
+    ) {
+      <tbody>
+        <tr>
+          <td colspan="12" class="text-center py-12 text-base-content/40">
+            No hay cuentas. Crea una con "+ Nueva cuenta".
+          </td>
+        </tr>
+      </tbody>
+    }
+
+    @if (loading) {
+      <tbody>
+        <tr>
+          <td colspan="12" class="text-center py-8">
+            <span class="loading loading-spinner loading-md"></span>
+          </td>
+        </tr>
+      </tbody>
+    }
+  </table>
+</div>

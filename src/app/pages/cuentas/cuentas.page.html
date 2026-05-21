@@ -1,7 +1,9 @@
 <div class="page">
-  <div *ngIf="errorMessage" class="alert alert-error">
+  @if (errorMessage) {
+  <div class="alert alert-error">
     <span>{{ errorMessage }}</span>
   </div>
+  }
 
   <app-platforms-tabs
     [platforms]="platforms"
@@ -21,31 +23,24 @@
       <h1 class="title">Cuentas</h1>
       <p class="text-sm opacity-70">
         Mostrando: <b>{{ activePlatformId ? '1 plataforma' : 'todas' }}</b> ·
-        Cuentas: <b>{{ filteredAccounts.length }}</b>
+        Cuentas: <b>{{ accounts.length }}</b>
       </p>
     </div>
-    <button
-      class="btn btn-neutral"
-      (click)="openCreateAccount()"
-      [disabled]="!canAccountsCreate"
-    >
-      + Cuenta
-    </button>
   </div>
 
-  <app-accounts-table
-    [accounts]="filteredAccounts"
+  <app-accounts-excel-table
+    [accounts]="accounts"
+    [platforms]="platforms"
+    [labels]="labels"
     [loading]="loading"
     [canUpdate]="canAccountsUpdate"
     [canDelete]="canAccountsDelete"
-    [labels]="labels"
-    (viewAccount)="onViewAccount($event)"
-    (editAccount)="onEditAccount($event)"
+    [canSell]="canSalesCreate"
+    [activePlatformId]="activePlatformId"
+    (refreshAccounts)="load()"
     (renewAccount)="onRenewAccount($event)"
     (replaceAccount)="onReplaceAccount($event)"
-    (changePassword)="onChangePassword($event)"
     (deleteAccount)="onDeleteAccount($event)"
-    (refreshAccounts)="load()"
   />
 
   <!-- Modales plataformas -->
@@ -67,30 +62,7 @@
     (deleted)="onPlatformChanged()"
   />
 
-  <!-- Modales cuentas -->
-  <app-create-account-modal
-    [open]="createAccountOpen"
-    [platforms]="platforms"
-    (close)="closeAll()"
-    (created)="onAccountChanged()"
-  />
-  <app-edit-account-modal
-    [open]="editAccountOpen"
-    [account]="selectedAccount"
-    [platforms]="platforms"
-    (close)="closeAll()"
-    (updated)="onAccountChanged()"
-  />
-  <app-account-drawer
-    [open]="viewAccountOpen"
-    [account]="selectedAccount"
-    [canSell]="canSalesCreate"
-    [allAccounts]="filteredAccounts"
-    (close)="closeAll()"
-    (changed)="onAccountChanged()"
-    (saleCreated)="load()"
-    (changed)="onAccountChanged()"
-  />
+  <!-- Modales cuentas que se mantienen -->
   <app-renew-account-modal
     [open]="renewAccountOpen"
     [account]="selectedAccount"
@@ -104,13 +76,6 @@
     (close)="replaceAccountOpen = false; selectedAccount = null"
     (replaced)="onAccountReplaced()"
   />
-  <app-change-password-modal
-    [open]="changePasswordOpen"
-    [account]="selectedAccount"
-    (close)="changePasswordOpen = false; selectedAccount = null"
-    (updated)="onPasswordChanged()"
-  />
-  <!-- Confirm eliminar cuenta -->
   <app-confirm-action-modal
     [open]="deleteAccountOpen"
     title="¿Eliminar cuenta?"
@@ -120,12 +85,6 @@
     [loading]="loadingDelete"
     (confirm)="confirmDeleteAccount()"
     (cancel)="deleteAccountOpen = false; accountToDelete = null"
-  />
-  <app-change-status-modal
-    [open]="changeStatusOpen"
-    [account]="selectedAccount"
-    (close)="changeStatusOpen = false; selectedAccount = null"
-    (updated)="onStatusChanged()"
   />
   <app-manage-labels-modal
     [open]="manageLabelsOpen"

@@ -13,18 +13,13 @@ import {
 import { parseApiError } from '../../utils/error.utils';
 
 import { PlatformsTabsComponent } from '../../components/platforms-tabs/platforms-tabs.component';
-import { AccountsTableComponent } from '../../components/accounts-table/accounts-table.component';
+import { AccountsExcelTableComponent } from '../../components/accounts-excel-table/accounts-excel-table.component';
 
 import { CreatePlatformModal } from '../../modales/cuentas/create-platform/create-platform.modal';
 import { EditPlatformModal } from '../../modales/cuentas/edit-platform/edit-platform.modal';
 import { DeletePlatformModal } from '../../modales/cuentas/delete-platform/delete-platform.modal';
-import { CreateAccountModal } from '../../modales/cuentas/create-account/create-account.modal';
-import { EditAccountModal } from '../../modales/cuentas/edit-account/edit-account.modal';
-import { AccountDrawerComponent } from '../../components/account-drawer/account-drawer.component';
 import { RenewAccountModal } from '../../modales/cuentas/renew-account/renew-account.modal';
 import { ReplaceAccountModal } from '../../modales/cuentas/replace-account/replace-account.modal';
-import { ChangePasswordModal } from '../../modales/cuentas/change-password/change-password.modal';
-import { ChangeStatusModal } from '../../modales/cuentas/change-status/change-status.modal';
 import { ConfirmActionModal } from '../../modales/confirmacion/confirm-action/confirm-action.modal';
 import { ManageLabelsModal } from '../../modales/labels/manage-labels/manage-labels-modal';
 import {
@@ -38,17 +33,12 @@ import {
   imports: [
     CommonModule,
     PlatformsTabsComponent,
-    AccountsTableComponent,
-    AccountDrawerComponent,
+    AccountsExcelTableComponent,
     CreatePlatformModal,
     EditPlatformModal,
-    CreateAccountModal,
-    EditAccountModal,
     DeletePlatformModal,
     RenewAccountModal,
     ReplaceAccountModal,
-    ChangePasswordModal,
-    ChangeStatusModal,
     ConfirmActionModal,
     ManageLabelsModal,
   ],
@@ -66,7 +56,6 @@ export class CuentasPage implements OnInit {
 
   platforms: StreamingPlatformDTO[] = [];
   accounts: StreamingAccountDTO[] = [];
-  filteredAccounts: StreamingAccountDTO[] = [];
   labels: StreamingLabelDTO[] = [];
   activePlatformId: number | null = null;
 
@@ -75,21 +64,12 @@ export class CuentasPage implements OnInit {
   deletePlatformOpen = false;
   selectedPlatform: StreamingPlatformDTO | null = null;
 
-  createAccountOpen = false;
-  editAccountOpen = false;
-  viewAccountOpen = false;
   selectedAccount: StreamingAccountDTO | null = null;
-
   renewAccountOpen = false;
   replaceAccountOpen = false;
-  changePasswordOpen = false;
-
   deleteAccountOpen = false;
   accountToDelete: StreamingAccountDTO | null = null;
-
-  changeStatusOpen = false;
   loadingDelete = false;
-
   manageLabelsOpen = false;
 
   get canPlatformsCreate() {
@@ -113,18 +93,17 @@ export class CuentasPage implements OnInit {
   get canAccountsUpdate() {
     return this.auth.hasPermission('STREAMING_ACCOUNTS:UPDATE');
   }
-  get canSalesCreate() {
-    return this.auth.hasPermission('STREAMING_SALES:CREATE');
-  }
   get canAccountsDelete() {
     return this.auth.hasPermission('STREAMING_ACCOUNTS:DELETE');
+  }
+  get canSalesCreate() {
+    return this.auth.hasPermission('STREAMING_SALES:CREATE');
   }
 
   ngOnInit() {
     this.load();
   }
 
-  // En load(): pasar platformId al fetch y quitar el filtro frontend
   async load() {
     this.loading = true;
     this.errorMessage = '';
@@ -139,15 +118,6 @@ export class CuentasPage implements OnInit {
       ]);
       this.platforms = platforms;
       this.accounts = accounts;
-
-      if (
-        this.activePlatformId &&
-        !platforms.some((p) => p.id === this.activePlatformId)
-      ) {
-        this.activePlatformId = null;
-      }
-
-      this.filteredAccounts = [...this.accounts];
       await this.loadLabels();
     } catch (e: any) {
       this.errorMessage = parseApiError(e);
@@ -175,63 +145,20 @@ export class CuentasPage implements OnInit {
     this.closeAll();
     this.createPlatformOpen = true;
   }
-  openCreateAccount() {
-    this.closeAll();
-    this.createAccountOpen = true;
-  }
 
   onEditPlatform(p: StreamingPlatformDTO) {
     this.closeAll();
     this.selectedPlatform = p;
     this.editPlatformOpen = true;
   }
-
   onDeletePlatform(p: StreamingPlatformDTO) {
     this.closeAll();
     this.selectedPlatform = p;
     this.deletePlatformOpen = true;
   }
-
-  onViewAccount(a: StreamingAccountDTO) {
-    this.selectedAccount = a;
-    this.viewAccountOpen = true;
-  }
-
-  onEditAccount(a: StreamingAccountDTO) {
-    this.closeAll();
-    this.selectedAccount = a;
-    this.editAccountOpen = true;
-  }
-
-  closeAll() {
-    this.createPlatformOpen = false;
-    this.editPlatformOpen = false;
-    this.deletePlatformOpen = false;
-    this.selectedPlatform = null;
-    this.createAccountOpen = false;
-    this.editAccountOpen = false;
-    this.viewAccountOpen = false;
-    this.selectedAccount = null;
-    this.renewAccountOpen = false;
-    this.replaceAccountOpen = false;
-    this.changePasswordOpen = false;
-    this.deleteAccountOpen = false;
-    this.accountToDelete = null;
-    this.changeStatusOpen = false;
-  }
-
-  async onPlatformChanged() {
-    this.closeAll();
-    await this.load();
-  }
-
-  async onAccountChanged() {
-    if (this.viewAccountOpen) {
-      await this.load();
-    } else {
-      this.closeAll();
-      await this.load();
-    }
+  onManageLabels(p: StreamingPlatformDTO) {
+    this.selectedPlatform = p;
+    this.manageLabelsOpen = true;
   }
 
   onRenewAccount(a: StreamingAccountDTO) {
@@ -239,33 +166,24 @@ export class CuentasPage implements OnInit {
     this.selectedAccount = a;
     this.renewAccountOpen = true;
   }
+  onReplaceAccount(a: StreamingAccountDTO) {
+    this.closeAll();
+    this.selectedAccount = a;
+    this.replaceAccountOpen = true;
+  }
+  onDeleteAccount(a: StreamingAccountDTO) {
+    this.closeAll();
+    this.accountToDelete = a;
+    this.deleteAccountOpen = true;
+  }
 
   async onAccountRenewed() {
     this.renewAccountOpen = false;
     this.selectedAccount = null;
     await this.load();
   }
-
-  onReplaceAccount(a: StreamingAccountDTO) {
-    this.closeAll();
-    this.selectedAccount = a;
-    this.replaceAccountOpen = true;
-  }
-
   async onAccountReplaced() {
     this.replaceAccountOpen = false;
-    this.selectedAccount = null;
-    await this.load();
-  }
-
-  onChangePassword(a: StreamingAccountDTO) {
-    this.closeAll();
-    this.selectedAccount = a;
-    this.changePasswordOpen = true;
-  }
-
-  async onPasswordChanged() {
-    this.changePasswordOpen = false;
     this.selectedAccount = null;
     await this.load();
   }
@@ -285,26 +203,21 @@ export class CuentasPage implements OnInit {
     }
   }
 
-  onDeleteAccount(a: StreamingAccountDTO) {
+  async onPlatformChanged() {
     this.closeAll();
-    this.accountToDelete = a;
-    this.deleteAccountOpen = true;
-  }
-
-  onChangeStatus(a: StreamingAccountDTO) {
-    this.closeAll();
-    this.selectedAccount = a;
-    this.changeStatusOpen = true;
-  }
-
-  async onStatusChanged() {
-    this.changeStatusOpen = false;
-    this.selectedAccount = null;
     await this.load();
   }
 
-  onManageLabels(p: StreamingPlatformDTO) {
-    this.selectedPlatform = p;
-    this.manageLabelsOpen = true;
+  closeAll() {
+    this.createPlatformOpen = false;
+    this.editPlatformOpen = false;
+    this.deletePlatformOpen = false;
+    this.selectedPlatform = null;
+    this.selectedAccount = null;
+    this.renewAccountOpen = false;
+    this.replaceAccountOpen = false;
+    this.deleteAccountOpen = false;
+    this.accountToDelete = null;
+    this.manageLabelsOpen = false;
   }
 }
