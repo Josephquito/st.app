@@ -92,7 +92,7 @@ export type CustomerSaleHistoryDTO = {
   status: 'ACTIVE' | 'CANCELED';
   notes: string | null;
   platform: { name: string };
-  account: { email: string; status: string };
+  account: { email: string; status: string | null };
   profile: { profileNo: number };
 };
 
