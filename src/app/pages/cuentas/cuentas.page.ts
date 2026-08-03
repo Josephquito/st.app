@@ -121,12 +121,12 @@ export class CuentasPage implements OnInit {
   }
 
   ngOnInit() {
-    this.load();
+    this.load(true);
   }
 
   // En load(): pasar platformId al fetch y quitar el filtro frontend
-  async load() {
-    this.loading = true;
+  async load(showSpinner = false) {
+    if (showSpinner) this.loading = true;
     this.errorMessage = '';
     try {
       const [platforms, accounts] = await Promise.all([
@@ -152,7 +152,7 @@ export class CuentasPage implements OnInit {
     } catch (e: any) {
       this.errorMessage = parseApiError(e);
     } finally {
-      this.loading = false;
+      if (showSpinner) this.loading = false;
     }
   }
 
@@ -168,7 +168,7 @@ export class CuentasPage implements OnInit {
 
   onFilterChange(id: number | null) {
     this.activePlatformId = id;
-    this.load();
+    this.load(true); // ← cambio de filtro = contexto nuevo, sí spinner
   }
 
   openCreatePlatform() {
@@ -222,7 +222,7 @@ export class CuentasPage implements OnInit {
 
   async onPlatformChanged() {
     this.closeAll();
-    await this.load();
+    await this.load(); // ← CRUD, refresco silencioso
   }
 
   async onAccountChanged() {
